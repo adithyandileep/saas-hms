@@ -1,0 +1,81 @@
+# Hospital Management System - Complete Feature List (Full Audit Version)
+
+## 1️⃣ SYSTEM FOUNDATION FEATURES
+- [x] 1.1 Installation & First-Run Setup
+  - [x] Full-screen branded animation on first launch
+  - [x] Product name animation (fade + scale)
+  - [x] One-time setup detection via DB flag
+  - [x] Setup wizard (Organization Name, Logo upload, Hospital contact details, Default SuperAdmin creation, Timezone selection, Currency selection)
+  - [x] Save configuration to DB & Redirect to login
+- [x] 1.2 Global System Settings
+  - [x] Edit organization details (logo, currency, timezone, token format template)
+  - [x] Enable/disable modules
+  - [x] Default consultation settings & registration fee
+  - [x] Theme default selection & feature toggles
+- [x] 1.3 Unified Authentication System
+  - [x] Single login for all roles with role detection
+  - [x] JWT access token & Refresh token mechanism (HTTP-only cookies)
+  - [x] Secure password hashing (bcrypt)
+  - [x] Password reset flow & Account activation/deactivation
+  - [x] Logout & Session expiration handling
+  - [x] Role-based dashboard routing
+
+## 2️⃣ ROLE & PERMISSION MANAGEMENT
+- [x] 2.1 Role Management (SUPERADMIN, ADMIN, DOCTOR, RECEPTIONIST, PATIENT)
+- [x] 2.2 Permission System
+  - [x] Module-level & CRUD-level permissions
+  - [x] Permission override capability (SuperAdmin only)
+  - [x] Admin permission assignment
+  - [x] Role-based middleware enforcement & Dynamic permission evaluation
+
+## 3️⃣ USER MANAGEMENT
+- [x] 3.1 User Creation (Admin, Doctor, Receptionist, Patient)
+- [x] 3.2 User Management Features (Activate/deactivate, Reset password, View activity logs, Soft delete, Audit logs)
+
+## 4️⃣ DOCTOR MODULE
+- [x] 4.1 Doctor Profile Creation (Name, Department, Phone, Username & password, Consultation Fee, Increment interval, Renewal charge, Follow-up logic)
+- [x] 4.2 Slot Configuration (Daily recurring, Weekly fixed, Slot duration, Start/End time, Max patients, Break time, Holiday override, Admin override)
+- [x] 4.3 Doctor Dashboard (Today's & Upcoming appointments, Acknowledge button, View patient history, Add notes/diagnosis/prescription, View reports, Mark complete)
+
+## 5️⃣ PATIENT MODULE
+- [x] 5.1 Registration (UHID auto gen, Name, DOB, Age calculation, Gender, Date, Email, Contacts)
+- [x] 5.2 Address Structure
+- [x] 5.3 Guardian Details
+- [x] 5.4 Referral Details
+- [x] 5.5 ID Proof
+- [x] 5.6 Registration Billing
+- [x] 5.7 Patient Dashboard
+
+## 6️⃣ BOOKING MODULE
+- [x] 6.1 Slot-Based Booking (View availability, Filter by dept/date, Real-time capacity check)
+- [x] 6.2 Conflict Prevention (DB transaction-based, Slot version control/optimistic locking, Unique constraint, No overlapping/double booking, Timezone-aware, Timeout window)
+- [x] 6.3 Token System (Sequential token, Configurable format, Daily reset, Unique constraint)
+- [x] 6.4 Booking Status Flow (BOOKED -> CHECKED_IN -> ACKNOWLEDGED -> COMPLETED -> CANCELLED, Auto-update payment status sync)
+
+## 7️⃣ BILLING MODULE
+- [x] 7.1 Invoice System (Auto generation, Tax/Net calculation, Downloadable PDF, Numbering system)
+- [x] 7.2 Payment Tracking (Multiple/Partial payments, Pending calculation, Refund, History log)
+- [x] 7.3 Payment Modes (CASH, CREDIT, UPI, STRIPE)
+
+## 8️⃣ PAYMENT ARCHITECTURE
+- [x] 8.1 Payment Provider Interface (createPayment, verifyPayment, refundPayment)
+- [x] 8.2 Implementations (Stripe, Cash, Upi)
+- [x] 8.3 Encapsulation (Strategy pattern usage)
+
+## 9️⃣ MEDICAL MODULE
+- [x] 9.1 Prescription (Diagnosis notes, JSON structured medication list, Printable format hook)
+- [x] 9.2 Medical Reports (Upload, Store URL, View, Download, Categorize)
+
+## 🔟 DASHBOARD & UI FEATURES
+- [ ] Fully responsive layout & Role-based sidebar menu
+- [ ] Global theme switch (Light/Dark mode, Theme persistence)
+- [ ] Dynamic navigation rendering
+- [ ] Loading states, Error boundary handling, Toast notifications, Form validation feedback
+
+## 1️⃣1️⃣ SYSTEM SECURITY & 1️⃣2️⃣ DATA INTEGRITY
+- [/] Auth & Security (Rate limiting, Helmet, Input validation, safe queries, CORS)
+- [/] Data Integrity (Soft deletes, timestamps, FK constraints, Composite indexes, Unique constraints)
+
+## 1️⃣3️⃣ PERFORMANCE & 1️⃣4️⃣ DEVOPS
+- [ ] Performance (DB indexing, Pagination, Filtering, Lazy loading, Query optimization)
+- [ ] DevOps (Dockerized stack, Environment management, Prisma production config)
