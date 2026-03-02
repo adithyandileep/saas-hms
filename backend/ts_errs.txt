@@ -1,4 +1,5 @@
-﻿src/modules/booking/booking.controller.ts(89,18): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+﻿
+src/modules/booking/booking.controller.ts(89,18): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
   Type 'string[]' is not assignable to type 'string'.
 src/modules/booking/booking.controller.ts(103,18): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
   Type 'string[]' is not assignable to type 'string'.

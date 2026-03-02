@@ -160,7 +160,6 @@ const form = useForm<z.infer<typeof bulkSlotSchema>>({
                     className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border" 
                   />
                 </div>
-<!-- capacity field removed -->
               </div>
             </div>
 
