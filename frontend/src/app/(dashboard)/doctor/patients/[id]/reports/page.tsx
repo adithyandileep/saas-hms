@@ -1,10 +1,10 @@
 "use client";
 
-import { useAuthStore } from "@/store/authStore";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, use } from "react";
 import api from "@/lib/api";
-import { FileText, Download, Loader2, Plus, X } from "lucide-react";
+import { FileText, Download, Loader2, Plus, X, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
+import Link from "next/link";
 
 interface Report {
   id: string;
@@ -14,11 +14,13 @@ interface Report {
   uploadedDate: string;
 }
 
-export default function PatientReports() {
-  const user = useAuthStore((state) => state.user);
+export default function DoctorPatientReports({ params }: { params: Promise<{ id: string }> }) {
+  const unwrappedParams = use(params);
+  const patientId = unwrappedParams.id;
+  
   const [reports, setReports] = useState<Report[]>([]);
+  const [patientName, setPatientName] = useState("");
   const [loading, setLoading] = useState(true);
-  const [patientId, setPatientId] = useState<string | null>(null);
   
   const [uploading, setUploading] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
@@ -26,16 +28,22 @@ export default function PatientReports() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetchMyReports();
-  }, []);
+    fetchReports();
+    fetchPatientName();
+  }, [patientId]);
 
-  const fetchMyReports = async () => {
+  const fetchPatientName = async () => {
     try {
-      const meRes = await api.get('/patients/me');
-      const pId = meRes.data.data.id;
-      setPatientId(pId);
-      
-      const repRes = await api.get(`/medical-reports/patient/${pId}`);
+      const res = await api.get(`/patients/${patientId}`);
+      setPatientName(res.data.data.name);
+    } catch {
+      console.log("Failed to fetch patient name");
+    }
+  };
+
+  const fetchReports = async () => {
+    try {
+      const repRes = await api.get(`/medical-reports/patient/${patientId}`);
       setReports(repRes.data.data || []);
     } catch {
       alert("Failed to fetch reports");
@@ -50,7 +58,6 @@ export default function PatientReports() {
       alert("Please select a file to upload");
       return;
     }
-    if (!patientId) return;
 
     setUploading(true);
     try {
@@ -58,14 +65,12 @@ export default function PatientReports() {
       const formDataUpload = new FormData();
       formDataUpload.append("file", file);
 
-      // 1. Upload file
-      const uploadRes = await api.post("/api/upload", formDataUpload, {
+      const uploadRes = await api.post("/upload", formDataUpload, {
         headers: { "Content-Type": "multipart/form-data" }
       });
       const fileUrl = uploadRes.data.url;
 
-      // 2. Create DB Record
-      await api.post("/api/medical-reports", {
+      await api.post("/medical-reports", {
         patientId,
         reportType: formData.reportType,
         description: formData.description,
@@ -75,7 +80,7 @@ export default function PatientReports() {
       alert("Report uploaded successfully!");
       setShowUpload(false);
       setFormData({ reportType: 'Lab Result', description: '' });
-      fetchMyReports();
+      fetchReports();
     } catch {
       alert("Upload failed");
     } finally {
@@ -85,13 +90,20 @@ export default function PatientReports() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
-          My Medical Reports
-        </h1>
+      <div className="flex items-center gap-4">
+        <Link href={`/doctor`} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition">
+          <ArrowLeft className="text-slate-600 dark:text-slate-400" />
+        </Link>
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+            Medical Reports
+          </h1>
+          {patientName && <p className="text-slate-500 font-medium">Patient: {patientName}</p>}
+        </div>
+        
         <button 
           onClick={() => setShowUpload(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl shadow-md hover:bg-blue-700 transition font-medium"
+          className="ml-auto flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl shadow-md hover:bg-blue-700 transition font-medium"
         >
           <Plus size={18} /> Upload Report
         </button>
@@ -119,18 +131,19 @@ export default function PatientReports() {
                   <option value="Lab Result">Lab Result</option>
                   <option value="X-Ray Scan">X-Ray / Scan</option>
                   <option value="Prescription">Prescription</option>
+                  <option value="Discharge Summary">Discharge Summary</option>
                   <option value="Other">Other</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-1">Description</label>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-1">Description / Notes</label>
                 <input 
                   type="text" 
                   value={formData.description}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
                   className="w-full border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
-                  placeholder="e.g. Blood Test Results"
+                  placeholder="e.g. Detailed blood panel results"
                 />
               </div>
 
@@ -180,10 +193,9 @@ export default function PatientReports() {
                   href={report.fileUrl} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 transition"
-                  title="Download File"
+                  className="p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 transition flex items-center gap-2 text-sm font-medium"
                 >
-                  <Download size={18} />
+                  <Download size={16} /> Download
                 </a>
               </div>
             ))}
@@ -191,11 +203,10 @@ export default function PatientReports() {
         ) : (
           <div className="p-12 text-center text-slate-500">
             <FileText className="mx-auto mb-3 opacity-20" size={48} />
-            <p>No medical reports uploaded yet.</p>
+            <p>No medical reports uploaded for this patient yet.</p>
           </div>
         )}
       </div>
-
     </div>
   );
 }
