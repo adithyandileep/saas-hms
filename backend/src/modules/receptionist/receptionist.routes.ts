@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { ReceptionistController } from './receptionist.service';
+import { ReceptionistController } from './receptionist.controller';
 import { authenticate, requireRoles } from '../../middlewares/auth.middleware';
 import { Role } from '@prisma/client';
 

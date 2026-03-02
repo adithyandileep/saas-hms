@@ -15,6 +15,24 @@ export class PatientController {
     }
   };
 
+  getMe = async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!req.user || req.user.role !== 'PATIENT') {
+        res.status(403).json({ message: 'Only patients can fetch their profile via /me' });
+        return;
+      }
+      const { prisma } = require('../../config/prisma');
+      const patient = await prisma.patient.findUnique({ where: { userId: req.user.userId } });
+      if (!patient) {
+        res.status(404).json({ message: 'Patient profile not found' });
+        return;
+      }
+      res.status(200).json({ data: patient });
+    } catch (error: any) {
+      res.status(500).json({ message: 'Failed to fetch patient' });
+    }
+  }
+
   getAll = async (req: Request, res: Response): Promise<void> => {
     try {
       const search = req.query.search as string | undefined;

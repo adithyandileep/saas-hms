@@ -55,7 +55,8 @@ export class AuthService {
     const organization = await this.repository.createOrganization({
       organizationName: data.organizationName,
       timezone: data.timezone,
-      currency: data.currency
+      currency: data.currency,
+      logoUrl: data.logoUrl
     });
 
     return {

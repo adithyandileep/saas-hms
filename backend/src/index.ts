@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import { authenticate } from './middlewares/auth.middleware';
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ import patientRoutes from './modules/patient/patient.routes';
 import bookingRoutes from './modules/booking/booking.routes';
 import visitRoutes from './modules/visit/visit.routes';
 import settingsRoutes from './modules/settings/settings.routes';
+import medicalReportRoutes from './modules/medical-report/medical-report.routes';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/admins', adminRoutes);
@@ -33,10 +35,32 @@ app.use('/api/patients', patientRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/visits', visitRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/medical-reports', medicalReportRoutes);
 
 // Base Route
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'Hospital Management API is running' });
+});
+
+import path from 'path';
+import { upload } from './utils/upload';
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
+
+// Generic File Upload Endpoint
+app.post('/api/upload', authenticate, upload.single('file'), (req, res) => {
+  try {
+    const fileReq = req as any;
+    if (!fileReq.file) {
+      res.status(400).json({ message: 'No file provided' });
+      return;
+    }
+    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${fileReq.file.filename}`;
+    res.status(201).json({ url: fileUrl, filename: fileReq.file.originalname });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Upload failed', error: error.message });
+  }
 });
 
 app.listen(port, () => {

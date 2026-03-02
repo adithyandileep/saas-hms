@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { BookingService } from './booking.service';
-import { CreateSlotDto, BookAppointmentDto } from './booking.dto';
+import { CreateSlotDto, BookAppointmentDto, CreateBulkSlotsDto, UpdateVisitDto } from './booking.dto';
 import { prisma } from '../../config/prisma';
 import { AppointmentStatus, PaymentStatus, PaymentMode } from '@prisma/client';
 
@@ -18,6 +18,22 @@ export class BookingController {
       res.status(201).json({ message: 'Slot created successfully', data: result });
     } catch (error: any) {
       res.status(400).json({ message: error.message || 'Failed to create slot' });
+    }
+  };
+
+  createBulkSlots = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const data = CreateBulkSlotsDto.parse(req.body);
+      
+      if (req.user?.role === 'DOCTOR' && req.user.userId !== data.doctorId) {
+        res.status(403).json({ message: 'Forbidden: Can only create slots for yourself' });
+        return;
+      }
+      
+      const result = await this.service.createBulkSlots(data);
+      res.status(201).json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || 'Failed to bulk create slots' });
     }
   };
 
@@ -161,6 +177,74 @@ export class BookingController {
       res.status(200).json({ data: updated, transactionInfo: paymentResult });
     } catch (error: any) {
       res.status(400).json({ message: error.message || 'Payment failed' });
+    }
+  };
+
+  // GET /appointments/:id/visit
+  getVisit = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const appointmentId = String(req.params.id);
+      const visit = await prisma.visit.findUnique({
+        where: { appointmentId }
+      });
+      res.status(200).json({ data: visit || null });
+    } catch (error: any) {
+      res.status(500).json({ message: 'Failed to fetch visit' });
+    }
+  };
+
+  // PUT /appointments/:id/visit
+  updateVisit = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const appointmentId = String(req.params.id);
+      const data = UpdateVisitDto.parse(req.body);
+
+      const appointment = await prisma.appointment.findUnique({ where: { id: appointmentId } });
+      if (!appointment) {
+        res.status(404).json({ message: 'Appointment not found' });
+        return;
+      }
+
+      const visit = await prisma.visit.upsert({
+        where: { appointmentId },
+        update: { ...data },
+        create: {
+          appointmentId,
+          patientId: appointment.patientId,
+          doctorId: appointment.doctorId,
+          ...data
+        }
+      });
+
+      res.status(200).json({ message: 'Visit updated', data: visit });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || 'Failed to update visit' });
+    }
+  };
+
+  // PATCH /appointments/:id/complete
+  completeAppointment = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+
+      // 1. Mark appointment as complete
+      const appointment = await prisma.appointment.update({
+        where: { id },
+        data: { status: AppointmentStatus.COMPLETED }
+      });
+
+      // 2. Mark visit as complete if exists
+      const visit = await prisma.visit.findUnique({ where: { appointmentId: id } });
+      if (visit) {
+        await prisma.visit.update({
+          where: { appointmentId: id },
+          data: { status: 'completed' }
+        });
+      }
+
+      res.status(200).json({ message: 'Consultation completed', data: appointment });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || 'Failed to complete appointment' });
     }
   };
 }

@@ -15,6 +15,50 @@ export class BookingService {
     });
   }
 
+  async createBulkSlots(data: z.infer<typeof import('./booking.dto').CreateBulkSlotsDto>) {
+    const slots = [];
+    let currentDate = new Date(data.startDate);
+    const endDate = new Date(data.endDate);
+    
+    // Set End time on endDate correctly to cover the whole day
+    endDate.setHours(23, 59, 59, 999);
+
+    const [startHour, startMinute] = data.startTimeStr.split(':').map(Number);
+    const [endHour, endMinute] = data.endTimeStr.split(':').map(Number);
+
+    while (currentDate <= endDate) {
+      if (!data.daysOfWeek || data.daysOfWeek.includes(currentDate.getDay())) {
+        let currentSlotStart = new Date(currentDate);
+        currentSlotStart.setHours(startHour, startMinute, 0, 0);
+        
+        const currentDayEnd = new Date(currentDate);
+        currentDayEnd.setHours(endHour, endMinute, 0, 0);
+
+        while (currentSlotStart < currentDayEnd) {
+          const currentSlotEnd = new Date(currentSlotStart.getTime() + data.slotDurationMinutes * 60000);
+          
+          if (currentSlotEnd <= currentDayEnd) {
+            slots.push({
+              doctorId: data.doctorId,
+              startTime: new Date(currentSlotStart),
+              endTime: new Date(currentSlotEnd),
+              maxCapacity: data.maxCapacity
+            });
+          }
+          
+          currentSlotStart = new Date(currentSlotEnd.getTime() + data.breakDurationMinutes * 60000);
+        }
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    if (slots.length > 0) {
+      await prisma.slot.createMany({ data: slots, skipDuplicates: true });
+    }
+    
+    return { count: slots.length, message: `Created ${slots.length} slots successfully.` };
+  }
+
   async getAvailableSlots(doctorId: string, dateString: string) {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) throw new Error("Invalid date");

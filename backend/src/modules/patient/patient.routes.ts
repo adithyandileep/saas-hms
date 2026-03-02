@@ -6,6 +6,7 @@ const router = Router();
 const controller = new PatientController();
 
 router.post('/register', authenticate, controller.register);
+router.get('/me', authenticate, controller.getMe);
 router.get('/', authenticate, controller.getAll);
 router.get('/:id', authenticate, controller.getById);
 router.put('/:id', authenticate, controller.update);

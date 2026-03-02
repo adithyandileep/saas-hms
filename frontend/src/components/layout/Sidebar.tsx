@@ -28,7 +28,7 @@ export function Sidebar() {
       { id: "departments", name: "Departments", href: "/admin/departments", icon: Building2 },
       { id: "receptionists", name: "Receptionists", href: "/admin/receptionists", icon: Users },
       { id: "patients", name: "Patients", href: "/admin/patients", icon: Users },
-      { id: "settings", name: "Settings", href: "/admin/settings", icon: Settings },
+      { id: "settings", name: "Settings", href: "/settings", icon: Settings },
     ];
 
     // Filter based on permissions (SUPERADMIN sees all)
@@ -42,6 +42,7 @@ export function Sidebar() {
     navItems = [
       { name: "Dashboard", href: "/doctor", icon: Home },
       { name: "Appointments", href: "/doctor/appointments", icon: Calendar },
+      { name: "Slots", href: "/doctor/slots", icon: Calendar },
       { name: "Patients", href: "/doctor/patients", icon: Users },
       { name: "Prescriptions", href: "/doctor/prescriptions", icon: FileText },
     ];
@@ -57,6 +58,7 @@ export function Sidebar() {
       { name: "Dashboard", href: "/patient", icon: Home },
       { name: "My Appointments", href: "/patient/appointments", icon: Calendar },
       { name: "Prescriptions", href: "/patient/prescriptions", icon: FileText },
+      { name: "Medical Reports", href: "/patient/reports", icon: Activity },
       { name: "Billing", href: "/patient/billing", icon: CreditCard },
     ];
   }
@@ -64,7 +66,7 @@ export function Sidebar() {
   return (
     <aside className="w-64 bg-slate-900 text-white min-h-screen flex flex-col transition-all duration-300 shadow-2xl z-50">
       <div className="h-16 flex items-center justify-center border-b border-slate-800 bg-slate-950/50">
-        <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400 tracking-wide flex items-center gap-2">
+        <h1 className="text-xl font-bold bg-clip-text text-transparent bg-linear-to-r from-blue-400 to-emerald-400 tracking-wide flex items-center gap-2">
           <Activity size={24} className="text-blue-500" />
           Enterprise HMS
         </h1>

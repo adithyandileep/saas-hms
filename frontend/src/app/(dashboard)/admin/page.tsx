@@ -135,7 +135,7 @@ export default function AdminDashboard() {
                   axisLine={false} 
                   tickLine={false} 
                   tick={{ fontSize: 12, fill: '#64748b' }}
-                  tickFormatter={(value) => `$${value}`}
+                  tickFormatter={(value: number) => `$${value}`}
                   dx={-10}
                 />
                 <Tooltip 
