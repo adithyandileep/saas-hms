@@ -12,7 +12,7 @@ interface Appointment {
   status: string;
   totalAmount: number;
   paymentStatus: string;
-  doctor: { name: string; department: string };
+  doctor: { name: string; department: string | { id: string; name: string; description?: string } };
 }
 
 export default function PatientAppointmentsPage() {
@@ -38,7 +38,9 @@ export default function PatientAppointmentsPage() {
           {appointments.map(a => (
             <div key={a.id} className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <div>
-                <p className="font-medium text-slate-900 dark:text-white">Dr. {a.doctor?.name} <span className="text-xs text-slate-500">({a.doctor?.department})</span></p>
+                <p className="font-medium text-slate-900 dark:text-white">
+                  Dr. {a.doctor?.name} <span className="text-xs text-slate-500">({typeof a.doctor?.department === 'string' ? a.doctor?.department : a.doctor?.department?.name})</span>
+                </p>
                 <p className="text-sm text-slate-500 mt-1">{new Date(a.startTime).toLocaleDateString()} | {new Date(a.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
                 <p className="text-xs text-slate-400 mt-1">Token: {a.token}</p>
               </div>

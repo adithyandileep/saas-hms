@@ -53,10 +53,22 @@ export default function AdminReceptionistsPage() {
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input placeholder="Full Name" value={form.name} onChange={e=> setForm({...form, name: e.target.value})} required className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white" />
-            <input placeholder="Phone" value={form.phone} onChange={e=> setForm({...form, phone: e.target.value})} maxLength={10} required className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white" />
-            <input placeholder="Username" value={form.username} onChange={e=> setForm({...form, username: e.target.value})} required className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white" />
-            <input type="password" placeholder="Password" value={form.password} onChange={e=> setForm({...form, password: e.target.value})} required minLength={6} className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white" />
+            <div className="flex flex-col">
+              <label htmlFor="receptionist-name" className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-300">Full Name</label>
+              <input id="receptionist-name" placeholder="Full Name" value={form.name} onChange={e=> setForm({...form, name: e.target.value})} required className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white" />
+            </div>
+            <div className="flex flex-col">
+              <label htmlFor="receptionist-phone" className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-300">Phone</label>
+              <input id="receptionist-phone" placeholder="Phone" value={form.phone} onChange={e=> setForm({...form, phone: e.target.value})} maxLength={10} required className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white" />
+            </div>
+            <div className="flex flex-col">
+              <label htmlFor="receptionist-username" className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-300">Username</label>
+              <input id="receptionist-username" placeholder="Username" value={form.username} onChange={e=> setForm({...form, username: e.target.value})} required className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white" />
+            </div>
+            <div className="flex flex-col">
+              <label htmlFor="receptionist-password" className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
+              <input id="receptionist-password" type="password" placeholder="Password" value={form.password} onChange={e=> setForm({...form, password: e.target.value})} required minLength={6} className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white" />
+            </div>
           </div>
           <button type="submit" disabled={submitting} className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition font-medium flex items-center justify-center gap-2">
             {submitting && <Loader2 className="animate-spin" size={18} />} Create Receptionist

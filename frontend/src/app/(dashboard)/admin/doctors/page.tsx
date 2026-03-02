@@ -76,17 +76,41 @@ export default function AdminDoctorsPage() {
         <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
           <h3 className="font-semibold text-lg text-slate-900 dark:text-white">New Doctor</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input placeholder="Full Name" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
-            <select value={form.departmentId} onChange={e => setForm({...form, departmentId: e.target.value})} required className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white appearance-none">
-              <option value="" disabled>Select Department</option>
-              {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
-            <input placeholder="Phone (max 10 digits)" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} maxLength={10} required className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
-            <input placeholder="Username" value={form.username} onChange={e => setForm({...form, username: e.target.value})} required className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
-            <input type="password" placeholder="Password (min 6 chars)" value={form.password} onChange={e => setForm({...form, password: e.target.value})} required className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
-            <input type="number" placeholder="Consultation Fee" value={form.consultationFee} onChange={e => setForm({...form, consultationFee: +e.target.value})} max={10000} className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
-            <input type="number" placeholder="Follow-up Interval (days)" value={form.incrementIntervalDays} onChange={e => setForm({...form, incrementIntervalDays: +e.target.value})} max={365} className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
-            <input type="number" placeholder="Renewal Charge" value={form.renewalCharge} onChange={e => setForm({...form, renewalCharge: +e.target.value})} max={5000} className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
+            <div className="flex flex-col">
+              <label htmlFor="doctor-name" className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-300">Full Name</label>
+              <input id="doctor-name" placeholder="Full Name" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
+            </div>
+            <div className="flex flex-col">
+              <label htmlFor="doctor-department" className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-300">Department</label>
+              <select id="doctor-department" value={form.departmentId} onChange={e => setForm({...form, departmentId: e.target.value})} required className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white appearance-none">
+                <option value="" disabled>Select Department</option>
+                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col">
+              <label htmlFor="doctor-phone" className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-300">Phone</label>
+              <input id="doctor-phone" placeholder="Phone (max 10 digits)" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} maxLength={10} required className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
+            </div>
+            <div className="flex flex-col">
+              <label htmlFor="doctor-username" className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-300">Username</label>
+              <input id="doctor-username" placeholder="Username" value={form.username} onChange={e => setForm({...form, username: e.target.value})} required className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
+            </div>
+            <div className="flex flex-col">
+              <label htmlFor="doctor-password" className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
+              <input id="doctor-password" type="password" placeholder="Password (min 6 chars)" value={form.password} onChange={e => setForm({...form, password: e.target.value})} required className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
+            </div>
+            <div className="flex flex-col">
+              <label htmlFor="doctor-fee" className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-300">Consultation Fee</label>
+              <input id="doctor-fee" type="number" placeholder="Consultation Fee" value={form.consultationFee} onChange={e => setForm({...form, consultationFee: +e.target.value})} max={10000} className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
+            </div>
+            <div className="flex flex-col">
+              <label htmlFor="doctor-interval" className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-300">Follow-up Interval (days)</label>
+              <input id="doctor-interval" type="number" placeholder="Follow-up Interval (days)" value={form.incrementIntervalDays} onChange={e => setForm({...form, incrementIntervalDays: +e.target.value})} max={365} className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
+            </div>
+            <div className="flex flex-col">
+              <label htmlFor="doctor-renewal" className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-300">Renewal Charge</label>
+              <input id="doctor-renewal" type="number" placeholder="Renewal Charge" value={form.renewalCharge} onChange={e => setForm({...form, renewalCharge: +e.target.value})} max={5000} className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
+            </div>
           </div>
           <button type="submit" disabled={submitting} className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition font-medium">
             {submitting ? <Loader2 className="animate-spin" size={18} /> : "Create Doctor"}

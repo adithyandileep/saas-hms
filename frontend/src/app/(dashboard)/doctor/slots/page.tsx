@@ -17,27 +17,21 @@ const bulkSlotSchema = z.object({
   endTimeStr: z.string().regex(/^([01]\d|2[0-3]):?([0-5]\d)$/, "Format HH:mm"),
   slotDurationMinutes: z.number().min(5).max(120),
   breakDurationMinutes: z.number().min(0).max(60),
-  maxCapacity: z.number().min(1).max(50),
+  // capacity removed; will default to 1 on server
 });
 
-export default function DoctorSlotsPage() {
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const user = useAuthStore((state) => state.user);
-
-  const form = useForm<z.infer<typeof bulkSlotSchema>>({
-    resolver: zodResolver(bulkSlotSchema),
-    defaultValues: {
-      startDate: new Date().toISOString().split("T")[0],
-      endDate: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString().split("T")[0],
-      startTimeStr: "09:00",
-      endTimeStr: "17:00",
-      slotDurationMinutes: 15,
-      breakDurationMinutes: 0,
-      maxCapacity: 1,
-    },
-  });
-
+const form = useForm<z.infer<typeof bulkSlotSchema>>({
+  resolver: zodResolver(bulkSlotSchema),
+  defaultValues: {
+    startDate: new Date().toISOString().split("T")[0],
+    endDate: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString().split("T")[0],
+    startTimeStr: "09:00",
+    endTimeStr: "17:00",
+    slotDurationMinutes: 15,
+    breakDurationMinutes: 0,
+    // maxCapacity omitted
+  },
+});
   async function onSubmit(values: z.infer<typeof bulkSlotSchema>) {
     if (!user?.id) return;
     
@@ -99,6 +93,7 @@ export default function DoctorSlotsPage() {
                   <label className="block text-sm font-medium text-slate-700">Start Date</label>
                   <input 
                     type="date"
+                    min={new Date().toISOString().split("T")[0]}
                     {...form.register("startDate")} 
                     className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border" 
                   />
@@ -108,6 +103,7 @@ export default function DoctorSlotsPage() {
                   <label className="block text-sm font-medium text-slate-700">End Date</label>
                   <input 
                     type="date"
+                    min={new Date().toISOString().split("T")[0]}
                     {...form.register("endDate")} 
                     className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border" 
                   />
@@ -127,6 +123,7 @@ export default function DoctorSlotsPage() {
                   <label className="block text-sm font-medium text-slate-700">Shift Start (HH:mm)</label>
                   <input 
                     type="time"
+                    min={new Date().toISOString().slice(11,16)}
                     {...form.register("startTimeStr")} 
                     className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border" 
                   />
@@ -135,6 +132,7 @@ export default function DoctorSlotsPage() {
                   <label className="block text-sm font-medium text-slate-700">Shift End (HH:mm)</label>
                   <input 
                     type="time"
+                    min={new Date().toISOString().slice(11,16)}
                     {...form.register("endTimeStr")} 
                     className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border" 
                   />
@@ -162,14 +160,7 @@ export default function DoctorSlotsPage() {
                     className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border" 
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">Patients Per Slot</label>
-                  <input 
-                    type="number"
-                    {...form.register("maxCapacity", { valueAsNumber: true })} 
-                    className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border" 
-                  />
-                </div>
+<!-- capacity field removed -->
               </div>
             </div>
 

@@ -4,7 +4,13 @@ import { useState, useEffect, useRef } from "react";
 import api from "@/lib/api";
 import { Loader2, Calendar, Search, Settings } from "lucide-react";
 
-interface Doctor { id: string; name: string; department: string; consultationFee: number; }
+interface Doctor {
+  id: string;
+  name: string;
+  // backend sometimes returns a department object; we'll accept either string or object
+  department: string | { id: string; name: string; description?: string };
+  consultationFee: number;
+}
 interface Patient { id: string; uhid: string; name: string; contactNo?: string | null; }
 interface Slot { id: string; startTime: string; endTime: string; maxCapacity: number; bookedCount: number; isAvailable: boolean; }
 
@@ -30,7 +36,7 @@ export default function ReceptionistAppointmentsPage() {
   // Slot creation form
   const [slotStart, setSlotStart] = useState("");
   const [slotEnd, setSlotEnd] = useState("");
-  const [slotCapacity, setSlotCapacity] = useState(1);
+  const [slotInterval, setSlotInterval] = useState(15);
   const [slotSubmitting, setSlotSubmitting] = useState(false);
   const [bookSubmitting, setBookSubmitting] = useState(false);
 
@@ -86,11 +92,24 @@ export default function ReceptionistAppointmentsPage() {
   }
 
   async function createSlot() {
-    if (!slotStart || !slotEnd) { alert("Set start and end time"); return; }
+    if (!slotStart || !slotEnd || !slotInterval) { alert("Set start, end and interval"); return; }
     setSlotSubmitting(true);
     try {
-      await api.post("/bookings/slots", { doctorId: selectedDoctorId, startTime: slotStart, endTime: slotEnd, maxCapacity: slotCapacity });
-      setSlotModal(false); setSlotStart(""); setSlotEnd(""); setSlotCapacity(1);
+      // convert to bulk slot payload for a single-day range
+      const start = new Date(slotStart);
+      const end = new Date(slotEnd);
+      const payload = {
+        doctorId: selectedDoctorId,
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+        startTimeStr: slotStart.slice(11,16),
+        endTimeStr: slotEnd.slice(11,16),
+        slotDurationMinutes: slotInterval,
+        breakDurationMinutes: 0,
+        maxCapacity: 1
+      };
+      await api.post("/bookings/slots/bulk", payload);
+      setSlotModal(false); setSlotStart(""); setSlotEnd(""); setSlotInterval(15);
       loadSlots();
     } catch (err: any) { alert(err.response?.data?.message || "Failed to create slot"); }
     finally { setSlotSubmitting(false); }
@@ -119,7 +138,12 @@ export default function ReceptionistAppointmentsPage() {
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Doctor</label>
             <select value={selectedDoctorId} onChange={e => setSelectedDoctorId(e.target.value)} className="border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
-              {doctors.map(d => <option key={d.id} value={d.id}>{d.name} ({d.department}) – ₹{d.consultationFee}</option>)}
+              {doctors.map(d => {
+                const deptName = typeof d.department === 'string' ? d.department : d.department?.name || 'Unknown';
+                return (
+                  <option key={d.id} value={d.id}>{d.name} ({deptName}) – ₹{d.consultationFee}</option>
+                );
+              })}
             </select>
           </div>
           <div>
@@ -219,15 +243,25 @@ export default function ReceptionistAppointmentsPage() {
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Start Time</label>
-                <input type="datetime-local" value={slotStart} onChange={e => setSlotStart(e.target.value)} className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
+                <input
+                  type="datetime-local"
+                  min={new Date().toISOString().slice(0,16)}
+                  value={slotStart}
+                  onChange={e => setSlotStart(e.target.value)}
+                  className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">End Time</label>
-                <input type="datetime-local" value={slotEnd} onChange={e => setSlotEnd(e.target.value)} className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
+                <input
+                  type="datetime-local"
+                  min={new Date().toISOString().slice(0,16)}
+                  value={slotEnd}
+                  onChange={e => setSlotEnd(e.target.value)}
+                  className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Max Capacity</label>
-                <input type="number" min={1} max={50} value={slotCapacity} onChange={e => setSlotCapacity(+e.target.value)} className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Interval (mins)</label>
+                <input type="number" min={1} value={slotInterval} onChange={e => setSlotInterval(+e.target.value)} className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
               </div>
             </div>
             <div className="flex gap-3 justify-end mt-5 pt-4 border-t border-slate-200 dark:border-slate-800">
