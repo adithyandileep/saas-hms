@@ -1,0 +1,14 @@
+﻿src/modules/booking/booking.controller.ts(89,18): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/modules/booking/booking.controller.ts(103,18): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/modules/booking/booking.controller.ts(121,67): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/modules/booking/booking.controller.ts(128,17): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/modules/booking/booking.controller.ts(132,18): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/modules/department/department.controller.ts(37,74): error TS2339: Property 'errors' does not exist on type 'ZodError<unknown>'.
+src/modules/department/department.controller.ts(55,74): error TS2339: Property 'errors' does not exist on type 'ZodError<unknown>'.
+src/modules/payment/payment.context.ts(47,28): error TS2322: Type '"PAID"' is not assignable to type '"PENDING"'.
+src/modules/payment/payment.context.ts(48,29): error TS2322: Type '"PARTIAL"' is not assignable to type '"PENDING"'.

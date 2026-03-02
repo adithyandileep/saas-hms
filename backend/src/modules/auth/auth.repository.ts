@@ -17,6 +17,7 @@ export class AuthRepository {
     const count = await prisma.user.count({
       where: { role: Role.SUPERADMIN }
     });
+    console.log(count);
     return count > 0;
   }
 

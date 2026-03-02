@@ -42,6 +42,7 @@ import bookingRoutes from './modules/booking/booking.routes';
 import visitRoutes from './modules/visit/visit.routes';
 import settingsRoutes from './modules/settings/settings.routes';
 import medicalReportRoutes from './modules/medical-report/medical-report.routes';
+import departmentRoutes from './modules/department/department.routes';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/admins', adminRoutes);
@@ -52,6 +53,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/visits', visitRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/medical-reports', medicalReportRoutes);
+app.use('/api/departments', departmentRoutes);
 
 // Base Route
 app.get('/health', (req, res) => {
@@ -77,6 +79,10 @@ app.post('/api/upload', authenticate, upload.single('file'), (req, res) => {
   } catch (error: any) {
     res.status(500).json({ message: 'Upload failed', error: error.message });
   }
+});
+
+app.get('/', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Hospital Management API is running' });
 });
 
 app.listen(port, () => {

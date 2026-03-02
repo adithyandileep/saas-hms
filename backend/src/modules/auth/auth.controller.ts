@@ -33,7 +33,7 @@ export class AuthController {
       const isRequired = await this.service.checkSetupRequired();
       res.status(200).json({ setupRequired: isRequired });
     } catch (error: any) {
-      res.status(500).json({ message: 'Error checking setup status' });
+      res.status(500).json({ message: 'Error checking setup status', error: error });
     }
   };
 

@@ -6,10 +6,12 @@ export class DoctorRepository {
     return prisma.$transaction(async (tx: any) => {
       const user = await tx.user.create({ data });
       
+      const { departmentId, ...restProfileData } = profileData;
+
       const profile = await tx.doctorProfile.create({
         data: {
-          ...profileData,
-          department: { connect: { id: profileData.departmentId } },
+          ...restProfileData,
+          department: { connect: { id: departmentId } },
           user: { connect: { id: user.id } }
         }
       });
