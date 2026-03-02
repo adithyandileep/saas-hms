@@ -9,14 +9,17 @@ export const CreateSlotDto = z.object({
 
 export const CreateBulkSlotsDto = z.object({
   doctorId: z.string().uuid(),
-  startDate: z.string().datetime(),
-  endDate: z.string().datetime(),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
   startTimeStr: z.string().regex(/^([01]\d|2[0-3]):?([0-5]\d)$/, 'Format HH:mm'),
   endTimeStr: z.string().regex(/^([01]\d|2[0-3]):?([0-5]\d)$/, 'Format HH:mm'),
   slotDurationMinutes: z.number().int().positive().default(15),
   breakDurationMinutes: z.number().int().min(0).default(0),
   maxCapacity: z.number().int().positive().default(1),
-  daysOfWeek: z.array(z.number().int().min(0).max(6)).optional() // 0=Sunday, 6=Saturday
+  daysOfWeek: z.array(z.number().int().min(0).max(6)).optional(), // 0=Sunday, 6=Saturday
+  specificDates: z.array(z.string().datetime()).optional()
+}).refine(data => (data.startDate && data.endDate) || (data.specificDates && data.specificDates.length > 0), {
+  message: "Either startDate and endDate OR specificDates must be provided"
 });
 
 export const BookAppointmentDto = z.object({

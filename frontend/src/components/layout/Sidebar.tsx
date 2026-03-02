@@ -20,7 +20,7 @@ export function Sidebar() {
   if (user?.role === "SUPERADMIN" || user?.role === "ADMIN") {
     const isSuper = user?.role === "SUPERADMIN";
     const perms = user?.permissions || [];
-    
+
     // Base admin links
     const allAdminLinks = [
       { id: "dashboard", name: "Dashboard", href: "/admin", icon: Home },
@@ -42,7 +42,6 @@ export function Sidebar() {
     navItems = [
       { name: "Dashboard", href: "/doctor", icon: Home },
       { name: "Appointments", href: "/doctor/appointments", icon: Calendar },
-      { name: "Slots", href: "/doctor/slots", icon: Calendar },
       { name: "Patients", href: "/doctor/patients", icon: Users },
       { name: "Prescriptions", href: "/doctor/prescriptions", icon: FileText },
     ];
@@ -79,11 +78,10 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${
-                isActive
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${isActive
                   ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30"
                   : "text-slate-400 hover:text-white hover:bg-slate-800"
-              }`}
+                }`}
             >
               <item.icon size={20} className={isActive ? "text-white" : "text-slate-500"} />
               {item.name}

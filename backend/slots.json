@@ -1,0 +1,178 @@
+[
+  {
+    "id": "31aca34b-4add-42ec-9f9d-b38dd5289ba1",
+    "doctorId": "9c972954-b9cd-4a80-a4bd-10527a0bd542",
+    "startTime": "2026-03-03T04:30:00.000Z",
+    "endTime": "2026-03-03T05:00:00.000Z",
+    "maxCapacity": 1,
+    "bookedCount": 0,
+    "isAvailable": true,
+    "version": 1,
+    "doctor": {
+      "id": "9c972954-b9cd-4a80-a4bd-10527a0bd542",
+      "userId": "fb03d0a0-f80e-4983-b177-118293fefd1f",
+      "name": "Akshay",
+      "departmentId": "716d14c3-a873-4e5a-9d46-760382815e63",
+      "phone": "9745896587",
+      "consultationFee": 200,
+      "incrementIntervalDays": 5,
+      "renewalCharge": 200,
+      "createdAt": "2026-03-02T16:32:22.325Z",
+      "updatedAt": "2026-03-02T16:32:22.325Z"
+    }
+  },
+  {
+    "id": "f47c97de-8717-40fc-984e-099c2d94218b",
+    "doctorId": "9c972954-b9cd-4a80-a4bd-10527a0bd542",
+    "startTime": "2026-03-03T05:00:00.000Z",
+    "endTime": "2026-03-03T05:30:00.000Z",
+    "maxCapacity": 1,
+    "bookedCount": 0,
+    "isAvailable": true,
+    "version": 1,
+    "doctor": {
+      "id": "9c972954-b9cd-4a80-a4bd-10527a0bd542",
+      "userId": "fb03d0a0-f80e-4983-b177-118293fefd1f",
+      "name": "Akshay",
+      "departmentId": "716d14c3-a873-4e5a-9d46-760382815e63",
+      "phone": "9745896587",
+      "consultationFee": 200,
+      "incrementIntervalDays": 5,
+      "renewalCharge": 200,
+      "createdAt": "2026-03-02T16:32:22.325Z",
+      "updatedAt": "2026-03-02T16:32:22.325Z"
+    }
+  },
+  {
+    "id": "51c62a93-7e68-4dcf-ba69-180931d3f8b5",
+    "doctorId": "9c972954-b9cd-4a80-a4bd-10527a0bd542",
+    "startTime": "2026-03-03T05:30:00.000Z",
+    "endTime": "2026-03-03T06:00:00.000Z",
+    "maxCapacity": 1,
+    "bookedCount": 0,
+    "isAvailable": true,
+    "version": 1,
+    "doctor": {
+      "id": "9c972954-b9cd-4a80-a4bd-10527a0bd542",
+      "userId": "fb03d0a0-f80e-4983-b177-118293fefd1f",
+      "name": "Akshay",
+      "departmentId": "716d14c3-a873-4e5a-9d46-760382815e63",
+      "phone": "9745896587",
+      "consultationFee": 200,
+      "incrementIntervalDays": 5,
+      "renewalCharge": 200,
+      "createdAt": "2026-03-02T16:32:22.325Z",
+      "updatedAt": "2026-03-02T16:32:22.325Z"
+    }
+  },
+  {
+    "id": "782f413d-7cbb-403e-a134-8d45a448f705",
+    "doctorId": "9c972954-b9cd-4a80-a4bd-10527a0bd542",
+    "startTime": "2026-03-03T06:00:00.000Z",
+    "endTime": "2026-03-03T06:30:00.000Z",
+    "maxCapacity": 1,
+    "bookedCount": 0,
+    "isAvailable": true,
+    "version": 1,
+    "doctor": {
+      "id": "9c972954-b9cd-4a80-a4bd-10527a0bd542",
+      "userId": "fb03d0a0-f80e-4983-b177-118293fefd1f",
+      "name": "Akshay",
+      "departmentId": "716d14c3-a873-4e5a-9d46-760382815e63",
+      "phone": "9745896587",
+      "consultationFee": 200,
+      "incrementIntervalDays": 5,
+      "renewalCharge": 200,
+      "createdAt": "2026-03-02T16:32:22.325Z",
+      "updatedAt": "2026-03-02T16:32:22.325Z"
+    }
+  },
+  {
+    "id": "06ebec1e-0005-40c1-8a19-d6c2bcb44d83",
+    "doctorId": "9c972954-b9cd-4a80-a4bd-10527a0bd542",
+    "startTime": "2026-03-03T06:30:00.000Z",
+    "endTime": "2026-03-03T07:00:00.000Z",
+    "maxCapacity": 1,
+    "bookedCount": 0,
+    "isAvailable": true,
+    "version": 1,
+    "doctor": {
+      "id": "9c972954-b9cd-4a80-a4bd-10527a0bd542",
+      "userId": "fb03d0a0-f80e-4983-b177-118293fefd1f",
+      "name": "Akshay",
+      "departmentId": "716d14c3-a873-4e5a-9d46-760382815e63",
+      "phone": "9745896587",
+      "consultationFee": 200,
+      "incrementIntervalDays": 5,
+      "renewalCharge": 200,
+      "createdAt": "2026-03-02T16:32:22.325Z",
+      "updatedAt": "2026-03-02T16:32:22.325Z"
+    }
+  },
+  {
+    "id": "31c2d4d0-e32a-41dc-a93e-daa65b34c9aa",
+    "doctorId": "9c972954-b9cd-4a80-a4bd-10527a0bd542",
+    "startTime": "2026-03-03T07:00:00.000Z",
+    "endTime": "2026-03-03T07:30:00.000Z",
+    "maxCapacity": 1,
+    "bookedCount": 0,
+    "isAvailable": true,
+    "version": 1,
+    "doctor": {
+      "id": "9c972954-b9cd-4a80-a4bd-10527a0bd542",
+      "userId": "fb03d0a0-f80e-4983-b177-118293fefd1f",
+      "name": "Akshay",
+      "departmentId": "716d14c3-a873-4e5a-9d46-760382815e63",
+      "phone": "9745896587",
+      "consultationFee": 200,
+      "incrementIntervalDays": 5,
+      "renewalCharge": 200,
+      "createdAt": "2026-03-02T16:32:22.325Z",
+      "updatedAt": "2026-03-02T16:32:22.325Z"
+    }
+  },
+  {
+    "id": "b645ace8-85d5-4a5d-92f9-0c78d3692c5c",
+    "doctorId": "9c972954-b9cd-4a80-a4bd-10527a0bd542",
+    "startTime": "2026-03-03T07:30:00.000Z",
+    "endTime": "2026-03-03T08:00:00.000Z",
+    "maxCapacity": 1,
+    "bookedCount": 0,
+    "isAvailable": true,
+    "version": 1,
+    "doctor": {
+      "id": "9c972954-b9cd-4a80-a4bd-10527a0bd542",
+      "userId": "fb03d0a0-f80e-4983-b177-118293fefd1f",
+      "name": "Akshay",
+      "departmentId": "716d14c3-a873-4e5a-9d46-760382815e63",
+      "phone": "9745896587",
+      "consultationFee": 200,
+      "incrementIntervalDays": 5,
+      "renewalCharge": 200,
+      "createdAt": "2026-03-02T16:32:22.325Z",
+      "updatedAt": "2026-03-02T16:32:22.325Z"
+    }
+  },
+  {
+    "id": "fa40149a-1f83-4f80-89ab-2bdfd89950d5",
+    "doctorId": "9c972954-b9cd-4a80-a4bd-10527a0bd542",
+    "startTime": "2026-03-03T08:00:00.000Z",
+    "endTime": "2026-03-03T08:30:00.000Z",
+    "maxCapacity": 1,
+    "bookedCount": 0,
+    "isAvailable": true,
+    "version": 1,
+    "doctor": {
+      "id": "9c972954-b9cd-4a80-a4bd-10527a0bd542",
+      "userId": "fb03d0a0-f80e-4983-b177-118293fefd1f",
+      "name": "Akshay",
+      "departmentId": "716d14c3-a873-4e5a-9d46-760382815e63",
+      "phone": "9745896587",
+      "consultationFee": 200,
+      "incrementIntervalDays": 5,
+      "renewalCharge": 200,
+      "createdAt": "2026-03-02T16:32:22.325Z",
+      "updatedAt": "2026-03-02T16:32:22.325Z"
+    }
+  }
+]

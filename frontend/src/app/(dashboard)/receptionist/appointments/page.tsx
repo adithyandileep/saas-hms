@@ -7,7 +7,6 @@ import { Loader2, Calendar, Search, Settings } from "lucide-react";
 interface Doctor {
   id: string;
   name: string;
-  // backend sometimes returns a department object; we'll accept either string or object
   department: string | { id: string; name: string; description?: string };
   consultationFee: number;
 }
@@ -18,7 +17,12 @@ export default function ReceptionistAppointmentsPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [selectedDoctorId, setSelectedDoctorId] = useState("");
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+  const getLocalDate = () => {
+    const offset = new Date().getTimezoneOffset() * 60000;
+    return new Date(Date.now() - offset).toISOString().split("T")[0];
+  };
+
+  const [selectedDate, setSelectedDate] = useState(getLocalDate());
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [bookingModal, setBookingModal] = useState(false);
@@ -33,12 +37,19 @@ export default function ReceptionistAppointmentsPage() {
   const [searching, setSearching] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Slot creation form
-  const [slotStart, setSlotStart] = useState("");
-  const [slotEnd, setSlotEnd] = useState("");
+  // Slot creation form - Enhanced Multi-Mode
+  const [generationMode, setGenerationMode] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [slotStartTime, setSlotStartTime] = useState("09:00");
+  const [slotEndTime, setSlotEndTime] = useState("17:00");
   const [slotInterval, setSlotInterval] = useState(15);
   const [slotSubmitting, setSlotSubmitting] = useState(false);
   const [bookSubmitting, setBookSubmitting] = useState(false);
+
+  const [configStartDate, setConfigStartDate] = useState(getLocalDate());
+  const [configEndDate, setConfigEndDate] = useState(getLocalDate());
+  const [selectedMonth, setSelectedMonth] = useState(getLocalDate().slice(0, 7));
+  const [selectedDaysOfWeek, setSelectedDaysOfWeek] = useState<number[]>([]);
+  const [selectedDates, setSelectedDates] = useState<number[]>([]);
 
   useEffect(() => {
     api.get("/doctors").then(r => {
@@ -92,26 +103,43 @@ export default function ReceptionistAppointmentsPage() {
   }
 
   async function createSlot() {
-    if (!slotStart || !slotEnd || !slotInterval) { alert("Set start, end and interval"); return; }
+    if (!slotStartTime || !slotEndTime || !slotInterval) { alert("Set time and interval"); return; }
     setSlotSubmitting(true);
     try {
-      // convert to bulk slot payload for a single-day range
-      const start = new Date(slotStart);
-      const end = new Date(slotEnd);
-      const payload = {
+      let payload: any = {
         doctorId: selectedDoctorId,
-        startDate: start.toISOString(),
-        endDate: end.toISOString(),
-        startTimeStr: slotStart.slice(11,16),
-        endTimeStr: slotEnd.slice(11,16),
+        startTimeStr: slotStartTime,
+        endTimeStr: slotEndTime,
         slotDurationMinutes: slotInterval,
         breakDurationMinutes: 0,
         maxCapacity: 1
       };
+
+      if (generationMode === "daily") {
+        if (!configStartDate || !configEndDate) { alert("Select start and end dates"); setSlotSubmitting(false); return; }
+        payload.startDate = new Date(`${configStartDate}T00:00:00`).toISOString();
+        payload.endDate = new Date(`${configEndDate}T00:00:00`).toISOString();
+      } else if (generationMode === "weekly") {
+        if (!selectedMonth || selectedDaysOfWeek.length === 0) { alert("Select month and days of week"); setSlotSubmitting(false); return; }
+        const [year, month] = selectedMonth.split('-');
+        payload.startDate = new Date(Number(year), Number(month) - 1, 1).toISOString();
+        payload.endDate = new Date(Number(year), Number(month), 0).toISOString();
+        payload.daysOfWeek = selectedDaysOfWeek;
+      } else if (generationMode === "monthly") {
+        if (!selectedMonth || selectedDates.length === 0) { alert("Select month and specific dates"); setSlotSubmitting(false); return; }
+        const [year, month] = selectedMonth.split('-');
+        payload.specificDates = selectedDates.map(d => new Date(Number(year), Number(month) - 1, d, 12, 0, 0).toISOString());
+      }
+
       await api.post("/bookings/slots/bulk", payload);
-      setSlotModal(false); setSlotStart(""); setSlotEnd(""); setSlotInterval(15);
-      loadSlots();
-    } catch (err: any) { alert(err.response?.data?.message || "Failed to create slot"); }
+      setSlotModal(false);
+
+      // Auto-switch date logic
+      if (generationMode === "daily") setSelectedDate(configStartDate);
+      else if (generationMode === "monthly" && selectedDates.length > 0) {
+        setSelectedDate(`${selectedMonth}-${selectedDates[0].toString().padStart(2, '0')}`);
+      }
+    } catch (err: any) { alert(err.response?.data?.message || "Failed to create slots"); }
     finally { setSlotSubmitting(false); }
   }
 
@@ -238,36 +266,101 @@ export default function ReceptionistAppointmentsPage() {
       {/* Slot Config Modal */}
       {slotModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-lg mx-4 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-4">Configure Slot – {selectedDoctor?.name}</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Start Time</label>
-                <input
-                  type="datetime-local"
-                  min={new Date().toISOString().slice(0,16)}
-                  value={slotStart}
-                  onChange={e => setSlotStart(e.target.value)}
-                  className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">End Time</label>
-                <input
-                  type="datetime-local"
-                  min={new Date().toISOString().slice(0,16)}
-                  value={slotEnd}
-                  onChange={e => setSlotEnd(e.target.value)}
-                  className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Interval (mins)</label>
-                <input type="number" min={1} value={slotInterval} onChange={e => setSlotInterval(+e.target.value)} className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
+
+            {/* Tabs */}
+            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl mb-6">
+              <button onClick={() => setGenerationMode("daily")} className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition ${generationMode === "daily" ? "bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}>Daily Range</button>
+              <button onClick={() => setGenerationMode("weekly")} className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition ${generationMode === "weekly" ? "bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}>Weekly</button>
+              <button onClick={() => setGenerationMode("monthly")} className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition ${generationMode === "monthly" ? "bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}>Monthly</button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Daily Mode */}
+              {generationMode === "daily" && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Start Date</label>
+                    <input type="date" value={configStartDate} onChange={e => setConfigStartDate(e.target.value)} min={getLocalDate()} className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">End Date</label>
+                    <input type="date" value={configEndDate} onChange={e => setConfigEndDate(e.target.value)} min={configStartDate || getLocalDate()} className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
+                  </div>
+                </div>
+              )}
+
+              {/* Weekly Mode */}
+              {generationMode === "weekly" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Select Month</label>
+                    <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} min={getLocalDate().slice(0, 7)} className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Select Days of Week</label>
+                    <div className="flex flex-wrap gap-2">
+                      {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, idx) => (
+                        <label key={day} className={`cursor-pointer px-3 py-1.5 rounded-lg border text-sm font-medium transition ${selectedDaysOfWeek.includes(idx) ? "bg-blue-50 border-blue-500 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300" : "border-slate-300 text-slate-600 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"}`}>
+                          <input type="checkbox" className="hidden" checked={selectedDaysOfWeek.includes(idx)}
+                            onChange={e => {
+                              if (e.target.checked) setSelectedDaysOfWeek([...selectedDaysOfWeek, idx]);
+                              else setSelectedDaysOfWeek(selectedDaysOfWeek.filter(d => d !== idx));
+                            }}
+                          />
+                          {day}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Monthly Mode */}
+              {generationMode === "monthly" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Select Month</label>
+                    <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} min={getLocalDate().slice(0, 7)} className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Select Dates</label>
+                    <div className="grid grid-cols-7 gap-1">
+                      {Array.from({ length: new Date(Number(selectedMonth.split('-')[0]), Number(selectedMonth.split('-')[1]), 0).getDate() }, (_, i) => i + 1).map(date => (
+                        <button key={date} type="button" onClick={() => {
+                          if (selectedDates.includes(date)) setSelectedDates(selectedDates.filter(d => d !== date));
+                          else setSelectedDates([...selectedDates, date]);
+                        }} className={`py-1.5 text-sm rounded-lg border transition ${selectedDates.includes(date) ? "bg-blue-50 border-blue-500 text-blue-700 font-bold dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300" : "border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"}`}>
+                          {date}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Common Time Config */}
+              <div className="grid grid-cols-3 gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Start Time</label>
+                  <input type="time" value={slotStartTime} onChange={e => setSlotStartTime(e.target.value)} className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">End Time</label>
+                  <input type="time" value={slotEndTime} onChange={e => setSlotEndTime(e.target.value)} className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Interval(min)</label>
+                  <input type="number" min={5} value={slotInterval} onChange={e => setSlotInterval(+e.target.value)} className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
+                </div>
               </div>
             </div>
-            <div className="flex gap-3 justify-end mt-5 pt-4 border-t border-slate-200 dark:border-slate-800">
+
+            <div className="flex gap-3 justify-end mt-6">
               <button onClick={() => setSlotModal(false)} className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition">Cancel</button>
               <button onClick={createSlot} disabled={slotSubmitting} className="px-6 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition flex items-center gap-2">
-                {slotSubmitting && <Loader2 className="animate-spin" size={16} />} Create Slot
+                {slotSubmitting && <Loader2 className="animate-spin" size={16} />} Create Slots
               </button>
             </div>
           </div>

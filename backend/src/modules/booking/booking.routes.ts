@@ -6,8 +6,8 @@ import { Role } from '@prisma/client';
 const router = Router();
 const controller = new BookingController();
 
-router.post('/slots', authenticate, requireRoles([Role.SUPERADMIN, Role.ADMIN, Role.DOCTOR, Role.RECEPTIONIST]), controller.createSlot);
-router.post('/slots/bulk', authenticate, requireRoles([Role.SUPERADMIN, Role.ADMIN, Role.DOCTOR]), controller.createBulkSlots);
+router.post('/slots', authenticate, requireRoles([Role.SUPERADMIN, Role.ADMIN, Role.RECEPTIONIST]), controller.createSlot);
+router.post('/slots/bulk', authenticate, requireRoles([Role.SUPERADMIN, Role.ADMIN, Role.RECEPTIONIST]), controller.createBulkSlots);
 router.get('/slots/:doctorId', authenticate, controller.getAvailableSlots);
 router.post('/book', authenticate, requireRoles([Role.RECEPTIONIST, Role.PATIENT, Role.ADMIN, Role.SUPERADMIN]), controller.bookAppointment);
 router.get('/appointments', authenticate, controller.getAppointments);

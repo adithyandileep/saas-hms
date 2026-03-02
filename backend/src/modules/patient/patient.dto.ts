@@ -4,8 +4,7 @@ export const RegisterPatientDto = z.object({
   name: z.string().min(1, 'Name is required'),
   firstName: z.string().optional(),
   lastName: z.string().optional(),
-  age: z.number().int().positive('Age must be a positive integer'),
-  dob: z.string().optional(),
+age: z.number().int().nonnegative('Age cannot be negative'),  dob: z.string().optional(),
   gender: z.string().optional(),
   
   // Structured Address

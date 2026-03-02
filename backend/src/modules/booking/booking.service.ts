@@ -16,46 +16,58 @@ export class BookingService {
   }
 
   async createBulkSlots(data: z.infer<typeof import('./booking.dto').CreateBulkSlotsDto>) {
-    const slots = [];
-    let currentDate = new Date(data.startDate);
-    const endDate = new Date(data.endDate);
-    
-    // Set End time on endDate correctly to cover the whole day
-    endDate.setHours(23, 59, 59, 999);
+    const slots: any[] = [];
 
     const [startHour, startMinute] = data.startTimeStr.split(':').map(Number);
     const [endHour, endMinute] = data.endTimeStr.split(':').map(Number);
 
-    while (currentDate <= endDate) {
-      if (!data.daysOfWeek || data.daysOfWeek.includes(currentDate.getDay())) {
-        let currentSlotStart = new Date(currentDate);
-        currentSlotStart.setHours(startHour, startMinute, 0, 0);
-        
-        const currentDayEnd = new Date(currentDate);
-        currentDayEnd.setHours(endHour, endMinute, 0, 0);
+    const generateForDate = (dateObj: Date) => {
+      let currentSlotStart = new Date(dateObj);
+      currentSlotStart.setHours(startHour, startMinute, 0, 0);
 
-        while (currentSlotStart < currentDayEnd) {
-          const currentSlotEnd = new Date(currentSlotStart.getTime() + data.slotDurationMinutes * 60000);
-          
-          if (currentSlotEnd <= currentDayEnd) {
-            slots.push({
-              doctorId: data.doctorId,
-              startTime: new Date(currentSlotStart),
-              endTime: new Date(currentSlotEnd),
-              maxCapacity: data.maxCapacity
-            });
-          }
-          
-          currentSlotStart = new Date(currentSlotEnd.getTime() + data.breakDurationMinutes * 60000);
+      const currentDayEnd = new Date(dateObj);
+      currentDayEnd.setHours(endHour, endMinute, 0, 0);
+
+      while (currentSlotStart < currentDayEnd) {
+        const currentSlotEnd = new Date(currentSlotStart.getTime() + data.slotDurationMinutes * 60000);
+
+        if (currentSlotEnd <= currentDayEnd) {
+          slots.push({
+            doctorId: data.doctorId,
+            startTime: new Date(currentSlotStart),
+            endTime: new Date(currentSlotEnd),
+            maxCapacity: data.maxCapacity
+          });
         }
+
+        currentSlotStart = new Date(currentSlotEnd.getTime() + data.breakDurationMinutes * 60000);
       }
-      currentDate.setDate(currentDate.getDate() + 1);
+    };
+
+    if (data.specificDates && data.specificDates.length > 0) {
+      for (const dateStr of data.specificDates) {
+        generateForDate(new Date(dateStr));
+      }
+    } else if (data.startDate && data.endDate) {
+      let currentDate = new Date(data.startDate);
+      const endDate = new Date(data.endDate);
+
+      endDate.setHours(23, 59, 59, 999);
+
+      while (currentDate <= endDate) {
+        if (!data.daysOfWeek || data.daysOfWeek.includes(currentDate.getDay())) {
+          generateForDate(currentDate);
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+    } else {
+      throw new Error("Invalid date configuration for bulk slots.");
     }
 
     if (slots.length > 0) {
       await prisma.slot.createMany({ data: slots, skipDuplicates: true });
     }
-    
+
     return { count: slots.length, message: `Created ${slots.length} slots successfully.` };
   }
 
@@ -92,23 +104,23 @@ export class BookingService {
     // Find the most recent completed or acknowledged appointment between this patient and doctor
     const lastAppointment = await prisma.appointment.findFirst({
       where: {
-         patientId: data.patientId,
-         doctorId: data.doctorId,
-         status: { in: ['COMPLETED', 'ACKNOWLEDGED', 'CHECKED_IN'] }
+        patientId: data.patientId,
+        doctorId: data.doctorId,
+        status: { in: ['COMPLETED', 'ACKNOWLEDGED', 'CHECKED_IN'] }
       },
       orderBy: { startTime: 'desc' }
     });
 
     if (lastAppointment) {
-       const daysSinceLastVisit = (new Date(slot.startTime).getTime() - new Date(lastAppointment.startTime).getTime()) / (1000 * 3600 * 24);
-       
-       if (daysSinceLastVisit <= doctor.incrementIntervalDays) {
-          // Free follow-up within the interval
-          finalFee = 0;
-       } else {
-          // Charged the renewal fee after the interval expires
-          finalFee = doctor.renewalCharge;
-       }
+      const daysSinceLastVisit = (new Date(slot.startTime).getTime() - new Date(lastAppointment.startTime).getTime()) / (1000 * 3600 * 24);
+
+      if (daysSinceLastVisit <= doctor.incrementIntervalDays) {
+        // Free follow-up within the interval
+        finalFee = 0;
+      } else {
+        // Charged the renewal fee after the interval expires
+        finalFee = doctor.renewalCharge;
+      }
     }
 
     // 4. Generate sequential token
