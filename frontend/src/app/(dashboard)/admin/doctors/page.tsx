@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
+import Link from "next/link";
 import { Plus, X, Loader2 } from "lucide-react";
 
 interface Doctor {
@@ -133,6 +134,7 @@ export default function AdminDoctorsPage() {
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Fee</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Username</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -148,6 +150,9 @@ export default function AdminDoctorsPage() {
                   <td className="px-6 py-4 text-slate-600 dark:text-slate-400">₹{d.consultationFee}</td>
                   <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{d.user?.username}</td>
                   <td className="px-6 py-4"><span className={`px-2 py-1 rounded-full text-xs font-medium ${d.user?.isActive ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700'}`}>{d.user?.isActive ? "Active" : "Inactive"}</span></td>
+                  <td className="px-6 py-4">
+                    <Link href={`/admin/doctors/${d.id}`} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition">View Details</Link>
+                  </td>
                 </tr>
               ))}
             </tbody>

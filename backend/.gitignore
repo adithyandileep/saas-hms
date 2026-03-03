@@ -95,4 +95,5 @@ docker-compose.override.yml
 # ------------------------------
 # Misc
 # ------------------------------
-.cache/
+.cache/package-lock.json
+package-lock.json

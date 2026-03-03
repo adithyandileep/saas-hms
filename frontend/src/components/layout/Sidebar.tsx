@@ -21,20 +21,23 @@ export function Sidebar() {
     const isSuper = user?.role === "SUPERADMIN";
     const perms = user?.permissions || [];
 
-    // Base admin links
+    // All possible admin links — both management and operational
     const allAdminLinks = [
-      { id: "dashboard", name: "Dashboard", href: "/admin", icon: Home },
-      { id: "doctors", name: "Doctors", href: "/admin/doctors", icon: Activity },
-      { id: "departments", name: "Departments", href: "/admin/departments", icon: Building2 },
-      { id: "receptionists", name: "Receptionists", href: "/admin/receptionists", icon: Users },
-      { id: "patients", name: "Patients", href: "/admin/patients", icon: Users },
-      { id: "settings", name: "Settings", href: "/settings", icon: Settings },
+      { id: "dashboard",      name: "Dashboard",      href: "/admin",                   icon: Home },
+      { id: "doctors",        name: "Doctors",         href: "/admin/doctors",           icon: Activity },
+      { id: "departments",    name: "Departments",     href: "/admin/departments",       icon: Building2 },
+      { id: "receptionists",  name: "Receptionists",   href: "/admin/receptionists",     icon: Users },
+      { id: "patients",       name: "Patients",        href: "/admin/patients",          icon: Users },
+      { id: "appointments",   name: "Appointments",    href: "/admin/appointments",      icon: Calendar },
+      { id: "billing",        name: "Billing",         href: "/admin/billing",           icon: CreditCard },
+      { id: "prescriptions",  name: "Prescriptions",   href: "/admin/prescriptions",     icon: FileText },
+      { id: "settings",       name: "Settings",        href: "/settings",                icon: Settings },
     ];
 
-    // Filter based on permissions (SUPERADMIN sees all)
+    // Filter based on permissions. SUPERADMIN sees all.
     navItems = allAdminLinks.filter(item => isSuper || perms.includes(item.id));
 
-    // SUPERADMIN only links
+    // Manage Admins: strictly Superadmin-only, never grantable to Admins
     if (isSuper) {
       navItems.push({ name: "Manage Admins", href: "/admin/admins", icon: Settings });
     }

@@ -26,10 +26,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
      return <div className="min-h-screen bg-slate-50 dark:bg-slate-900" />;
   }
 
-  // Basic security routing
-  if (pathname.startsWith("/admin") && user?.role !== "SUPERADMIN" && user?.role !== "ADMIN") router.push(`/${user?.role.toLowerCase()}`);
+  // Role-based route guards
+  const isAdminRole = user?.role === "SUPERADMIN" || user?.role === "ADMIN";
+
+  if (pathname.startsWith("/admin") && !isAdminRole) router.push(`/${user?.role.toLowerCase()}`);
   if (pathname.startsWith("/doctor") && user?.role !== "DOCTOR") router.push(`/${user?.role.toLowerCase()}`);
-  if (pathname.startsWith("/receptionist") && user?.role !== "RECEPTIONIST") router.push(`/${user?.role.toLowerCase()}`);
+  // Allow admins/superadmins to access receptionist billing detail pages (admin billing links to them)
+  if (pathname.startsWith("/receptionist") && user?.role !== "RECEPTIONIST" && !isAdminRole) router.push(`/${user?.role.toLowerCase()}`);
   if (pathname.startsWith("/patient") && user?.role !== "PATIENT") router.push(`/${user?.role.toLowerCase()}`);
 
   return (
