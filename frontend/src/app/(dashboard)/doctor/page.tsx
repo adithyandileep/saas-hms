@@ -89,21 +89,24 @@ export default function DoctorDashboard() {
         ) : todayAppts.length > 0 ? (
           <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
             {todayAppts.map(appt => (
-              <div key={appt.id} className="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
-                <div className="flex items-center gap-6">
-                  <div className="w-16 h-16 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex flex-col items-center justify-center font-bold">
-                    <span className="text-xs font-medium uppercase opacity-70">Token</span>
-                    <span className="text-xl">{appt.token}</span>
+              <div key={appt.id} className="p-4 flex items-center justify-between gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
+                <div className="flex items-center gap-4 min-w-0">
+                  {/* Token badge — flexible width, no overflow */}
+                  <div className="shrink-0 flex flex-col items-center justify-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl px-3 py-2 min-w-[56px]">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider opacity-60 leading-none mb-1">Token</span>
+                    <span className="text-sm font-bold font-mono leading-none break-all text-center">{appt.token}</span>
                   </div>
-                  <div>
-                    <h4 className="font-bold text-slate-900 dark:text-white">{appt.patient.name}</h4>
-                    <p className="text-sm text-slate-500 font-mono mb-1">{appt.patient.uhid}</p>
-                    <div className="flex items-center gap-2 text-xs font-semibold">
-                      <span className="text-slate-400 flex items-center gap-1">
-                        <Clock size={12} /> {format(new Date(appt.startTime), "hh:mm a")} - {format(new Date(appt.endTime), "hh:mm a")}
+                  {/* Patient info */}
+                  <div className="min-w-0">
+                    <h4 className="font-bold text-slate-900 dark:text-white truncate">{appt.patient.name}</h4>
+                    <p className="text-xs text-slate-500 font-mono mb-1.5 truncate">{appt.patient.uhid}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs text-slate-400 flex items-center gap-1 shrink-0">
+                        <Clock size={11} />
+                        {format(new Date(appt.startTime), "hh:mm a")} – {format(new Date(appt.endTime), "hh:mm a")}
                       </span>
-                      <span className={`px-2 py-0.5 rounded-full ${
-                        appt.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${
+                        appt.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
                         : appt.status === 'CHECKED_IN' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                         : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
                       }`}>
@@ -112,11 +115,11 @@ export default function DoctorDashboard() {
                     </div>
                   </div>
                 </div>
-                <div>
-                  <Link 
+                <div className="shrink-0">
+                  <Link
                     href={`/doctor/consultation/${appt.id}`}
-                    className={`px-4 py-2 rounded-xl text-sm font-bold transition ${
-                      appt.status === 'COMPLETED' 
+                    className={`px-4 py-2 rounded-xl text-sm font-bold transition whitespace-nowrap ${
+                      appt.status === 'COMPLETED'
                       ? 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
                       : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20'
                     }`}
