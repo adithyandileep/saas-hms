@@ -7,10 +7,28 @@ export class BookingService {
   private repository = new BookingRepository();
 
   async createSlot(data: z.infer<typeof CreateSlotDto>) {
+    const startTime = new Date(data.startTime);
+    const endTime = new Date(data.endTime);
+    if (startTime < new Date()) {
+      throw new Error("Selected time is not valid or past.");
+    }
+
+    const existingOverlaps = await prisma.slot.findFirst({
+      where: {
+        doctorId: data.doctorId,
+        startTime: { lt: endTime },
+        endTime: { gt: startTime }
+      }
+    });
+
+    if (existingOverlaps) {
+      throw new Error("Slot overlaps with an existing appointment slot.");
+    }
+
     return this.repository.createSlot({
       doctorId: data.doctorId,
-      startTime: new Date(data.startTime),
-      endTime: new Date(data.endTime),
+      startTime,
+      endTime,
       maxCapacity: data.maxCapacity
     });
   }
@@ -20,6 +38,23 @@ export class BookingService {
 
     const [startHour, startMinute] = data.startTimeStr.split(':').map(Number);
     const [endHour, endMinute] = data.endTimeStr.split(':').map(Number);
+
+    const now = new Date();
+
+    // Fetch existing slots to prevent overlaps
+    const existingSlots = await prisma.slot.findMany({
+      where: {
+        doctorId: data.doctorId,
+        endTime: { gt: now }
+      },
+      select: { startTime: true, endTime: true }
+    });
+
+    const isOverlapping = (newStart: Date, newEnd: Date) => {
+      return existingSlots.some(existing =>
+        newStart < existing.endTime && newEnd > existing.startTime
+      );
+    };
 
     const generateForDate = (dateObj: Date) => {
       let currentSlotStart = new Date(dateObj);
@@ -32,6 +67,13 @@ export class BookingService {
         const currentSlotEnd = new Date(currentSlotStart.getTime() + data.slotDurationMinutes * 60000);
 
         if (currentSlotEnd <= currentDayEnd) {
+          if (currentSlotStart < now) {
+            throw new Error("Selected time is not valid or past.");
+          }
+          if (isOverlapping(currentSlotStart, currentSlotEnd)) {
+            throw new Error("One or more generated slots overlap with existing appointments for this doctor.");
+          }
+
           slots.push({
             doctorId: data.doctorId,
             startTime: new Date(currentSlotStart),

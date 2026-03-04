@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import api from "@/lib/api";
 import { Loader2, Calendar, Search, Settings } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface Doctor {
   id: string;
@@ -44,12 +45,15 @@ export default function ReceptionistAppointmentsPage() {
   const [slotInterval, setSlotInterval] = useState(15);
   const [slotSubmitting, setSlotSubmitting] = useState(false);
   const [bookSubmitting, setBookSubmitting] = useState(false);
+  const [bookPaymentMode, setBookPaymentMode] = useState("CASH"); // New state for payment mode
 
   const [configStartDate, setConfigStartDate] = useState(getLocalDate());
   const [configEndDate, setConfigEndDate] = useState(getLocalDate());
   const [selectedMonth, setSelectedMonth] = useState(getLocalDate().slice(0, 7));
   const [selectedDaysOfWeek, setSelectedDaysOfWeek] = useState<number[]>([]);
   const [selectedDates, setSelectedDates] = useState<number[]>([]);
+
+  const router = useRouter(); // Initialize useRouter
 
   useEffect(() => {
     api.get("/doctors").then(r => {
@@ -88,16 +92,18 @@ export default function ReceptionistAppointmentsPage() {
     if (new Date(slot.endTime) < new Date()) { alert("Cannot book a past slot"); return; }
     setSelectedSlot(slot); setBookingModal(true);
     setQuery(""); setSelectedPatient(null); setShowDropdown(false);
+    setBookPaymentMode("CASH"); // Reset payment mode when opening modal
   }
 
   async function confirmBooking() {
     if (!selectedSlot || !selectedPatient || !selectedDoctorId) { alert("Select patient and slot"); return; }
     setBookSubmitting(true); setMessage("");
     try {
-      const res = await api.post("/bookings/book", { patientId: selectedPatient.id, doctorId: selectedDoctorId, slotId: selectedSlot.id, paymentMode: "CASH" });
-      setMessage(`✅ Booked! Token: ${res.data.data.token}`);
+      const res = await api.post("/bookings/book", { patientId: selectedPatient.id, doctorId: selectedDoctorId, slotId: selectedSlot.id, paymentMode: bookPaymentMode });
       setBookingModal(false); setSelectedSlot(null); setSelectedPatient(null);
-      loadSlots();
+      setMessage("✅ Appointment booked successfully!");
+      loadSlots(); // Refresh slots after booking
+      router.push(`/receptionist/patients/${selectedPatient.id}`);
     } catch (err: any) { setMessage(`❌ ${err.response?.data?.message || "Booking failed"}`); }
     finally { setBookSubmitting(false); }
   }
@@ -116,9 +122,9 @@ export default function ReceptionistAppointmentsPage() {
       };
 
       if (generationMode === "daily") {
-        if (!configStartDate || !configEndDate) { alert("Select start and end dates"); setSlotSubmitting(false); return; }
+        if (!configStartDate) { alert("Select a date"); setSlotSubmitting(false); return; }
         payload.startDate = new Date(`${configStartDate}T00:00:00`).toISOString();
-        payload.endDate = new Date(`${configEndDate}T00:00:00`).toISOString();
+        payload.endDate = new Date(`${configStartDate}T00:00:00`).toISOString();
       } else if (generationMode === "weekly") {
         if (!selectedMonth || selectedDaysOfWeek.length === 0) { alert("Select month and days of week"); setSlotSubmitting(false); return; }
         const [year, month] = selectedMonth.split('-');
@@ -133,13 +139,21 @@ export default function ReceptionistAppointmentsPage() {
 
       await api.post("/bookings/slots/bulk", payload);
       setSlotModal(false);
+      setMessage("✅ Slots created successfully!");
 
-      // Auto-switch date logic
-      if (generationMode === "daily") setSelectedDate(configStartDate);
-      else if (generationMode === "monthly" && selectedDates.length > 0) {
-        setSelectedDate(`${selectedMonth}-${selectedDates[0].toString().padStart(2, '0')}`);
+      // Auto-switch date logic and refresh
+      if (generationMode === "daily") {
+        if (selectedDate === configStartDate) loadSlots();
+        else setSelectedDate(configStartDate);
       }
-    } catch (err: any) { alert(err.response?.data?.message || "Failed to create slots"); }
+      else if (generationMode === "monthly" && selectedDates.length > 0) {
+        const newDate = `${selectedMonth}-${selectedDates[0].toString().padStart(2, '0')}`;
+        if (selectedDate === newDate) loadSlots();
+        else setSelectedDate(newDate);
+      } else {
+        loadSlots();
+      }
+    } catch (err: any) { setMessage(`❌ ${err.response?.data?.message || "Failed to create slots"}`); }
     finally { setSlotSubmitting(false); }
   }
 
@@ -251,6 +265,20 @@ export default function ReceptionistAppointmentsPage() {
               </div>
             )}
 
+            {/* Payment Mode Selection */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Payment Mode</label>
+              <select
+                value={bookPaymentMode}
+                onChange={(e) => setBookPaymentMode(e.target.value)}
+                className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="CASH">Cash</option>
+                <option value="CREDIT">Card</option>
+                <option value="UPI">UPI</option>
+              </select>
+            </div>
+
             <div className="flex gap-3 justify-end pt-2 border-t border-slate-200 dark:border-slate-800">
               <button onClick={() => { setBookingModal(false); setSelectedSlot(null); setSelectedPatient(null); setQuery(""); }}
                 className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition">Cancel</button>
@@ -271,7 +299,7 @@ export default function ReceptionistAppointmentsPage() {
 
             {/* Tabs */}
             <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl mb-6">
-              <button onClick={() => setGenerationMode("daily")} className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition ${generationMode === "daily" ? "bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}>Daily Range</button>
+              <button onClick={() => setGenerationMode("daily")} className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition ${generationMode === "daily" ? "bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}>Daily</button>
               <button onClick={() => setGenerationMode("weekly")} className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition ${generationMode === "weekly" ? "bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}>Weekly</button>
               <button onClick={() => setGenerationMode("monthly")} className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition ${generationMode === "monthly" ? "bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}>Monthly</button>
             </div>
@@ -279,14 +307,10 @@ export default function ReceptionistAppointmentsPage() {
             <div className="space-y-4">
               {/* Daily Mode */}
               {generationMode === "daily" && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Start Date</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Date</label>
                     <input type="date" value={configStartDate} onChange={e => setConfigStartDate(e.target.value)} min={getLocalDate()} className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">End Date</label>
-                    <input type="date" value={configEndDate} onChange={e => setConfigEndDate(e.target.value)} min={configStartDate || getLocalDate()} className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
                   </div>
                 </div>
               )}

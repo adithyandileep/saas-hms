@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import api from "@/lib/api";
 import Link from "next/link";
 import { Plus, X, Loader2, Search, FileSpreadsheet, FileText, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface Patient {
   id: string; uhid: string; name: string; age: number;
@@ -15,6 +16,7 @@ interface Patient {
 const PER_PAGE = 10;
 
 export default function AdminPatientsPage() {
+  const router = useRouter();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -173,7 +175,15 @@ export default function AdminPatientsPage() {
         idProofType, idProofDetail, idProofData: idProofFile,
         registrationAmount: Number(registrationAmount),
       });
-      setShowForm(false); fetchPatients();
+      setShowForm(false);
+
+      const newPatientId = res.data?.data?.id;
+      if (newPatientId) {
+        router.push(`/admin/appointments?patientId=${newPatientId}`);
+        return;
+      }
+
+      fetchPatients();
       // Reset form
       setFirstName(""); setLastName(""); setDob(""); setGender(""); setContactNo(""); setAlternateContact(""); setEmail("");
       setHouseNumber(""); setHouseName(""); setHouseAddress(""); setLocalArea(""); setStreet(""); setCity(""); setStateVal(""); setPincode("");

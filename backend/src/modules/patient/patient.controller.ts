@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { PatientService } from './patient.service';
 import { RegisterPatientDto } from './patient.dto';
+import { prisma } from '../../config/prisma';
+import { PaymentStatus, PaymentMode } from '@prisma/client';
 
 export class PatientController {
   private service = new PatientService();
@@ -74,6 +76,47 @@ export class PatientController {
       res.status(200).json({ message: 'Patient deleted' });
     } catch (error: any) {
       res.status(400).json({ message: error.message || 'Failed to delete patient' });
+    }
+  };
+
+  pay = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const id = req.params.id as string;
+      const { paymentMode } = req.body;
+      const modeToUse = (paymentMode as PaymentMode) || PaymentMode.CASH;
+
+      const patient = await prisma.patient.findUnique({ where: { id } });
+      if (!patient) {
+        res.status(404).json({ message: 'Patient not found' });
+        return;
+      }
+
+      if (patient.registrationPaymentStatus === PaymentStatus.PAID) {
+        res.status(400).json({ message: 'Registration is already paid' });
+        return;
+      }
+
+      const amount = patient.registrationAmount || 0;
+
+      // Create a payment record for registration
+      await prisma.payment.create({
+        data: {
+          patientId: id,
+          amount,
+          paymentMode: modeToUse,
+          status: PaymentStatus.PAID,
+          transactionId: `REG-${Date.now()}`
+        }
+      });
+
+      const updated = await prisma.patient.update({
+        where: { id },
+        data: { registrationPaymentStatus: PaymentStatus.PAID }
+      });
+
+      res.status(200).json({ message: 'Registration paid successfully', data: updated });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || 'Payment failed' });
     }
   };
 }

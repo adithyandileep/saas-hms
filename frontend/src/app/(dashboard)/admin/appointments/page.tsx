@@ -23,15 +23,19 @@ export default function AdminAppointmentsPage() {
   };
 
   const [selectedDate, setSelectedDate] = useState(getLocalDate());
-  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
-  const [bookingModal, setBookingModal] = useState(false);
   const [slotModal, setSlotModal] = useState(false);
   const [message, setMessage] = useState("");
 
+  // Booking Modal states
+  const [bookingModal, setBookingModal] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [bookSubmitting, setBookSubmitting] = useState(false);
+  const [bookPaymentMode, setBookPaymentMode] = useState("CASH");
+
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Patient[]>([]);
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [searching, setSearching] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -90,10 +94,9 @@ export default function AdminAppointmentsPage() {
     if (!selectedSlot || !selectedPatient || !selectedDoctorId) { alert("Select patient and slot"); return; }
     setBookSubmitting(true); setMessage("");
     try {
-      const res = await api.post("/bookings/book", { patientId: selectedPatient.id, doctorId: selectedDoctorId, slotId: selectedSlot.id, paymentMode: "CASH" });
-      setMessage(`✅ Booked! Token: ${res.data.data.token}`);
+      const res = await api.post("/bookings/book", { patientId: selectedPatient.id, doctorId: selectedDoctorId, slotId: selectedSlot.id, paymentMode: bookPaymentMode });
       setBookingModal(false); setSelectedSlot(null); setSelectedPatient(null);
-      loadSlots();
+      router.push(`/admin/patients/${selectedPatient.id}`);
     } catch (err: any) { setMessage(`❌ ${err.response?.data?.message || "Booking failed"}`); }
     finally { setBookSubmitting(false); }
   }
@@ -112,7 +115,7 @@ export default function AdminAppointmentsPage() {
       };
       if (generationMode === "daily") {
         payload.startDate = new Date(`${configStartDate}T00:00:00`).toISOString();
-        payload.endDate = new Date(`${configEndDate}T00:00:00`).toISOString();
+        payload.endDate = new Date(`${configStartDate}T00:00:00`).toISOString();
       } else if (generationMode === "weekly") {
         const [year, month] = selectedMonth.split('-');
         payload.startDate = new Date(Number(year), Number(month) - 1, 1).toISOString();
@@ -124,7 +127,18 @@ export default function AdminAppointmentsPage() {
       }
       await api.post("/bookings/slots/bulk", payload);
       setSlotModal(false);
-      if (generationMode === "daily") setSelectedDate(configStartDate);
+      // Auto-switch date logic and refresh
+      if (generationMode === "daily") {
+        if (selectedDate === configStartDate) loadSlots();
+        else setSelectedDate(configStartDate);
+      }
+      else if (generationMode === "monthly" && selectedDates.length > 0) {
+        const newDate = `${selectedMonth}-${selectedDates[0].toString().padStart(2, '0')}`;
+        if (selectedDate === newDate) loadSlots();
+        else setSelectedDate(newDate);
+      } else {
+        loadSlots();
+      }
     } catch (err: any) { alert(err.response?.data?.message || "Failed to create slots"); }
     finally { setSlotSubmitting(false); }
   }
@@ -250,15 +264,14 @@ export default function AdminAppointmentsPage() {
               {(["daily", "weekly", "monthly"] as const).map(mode => (
                 <button key={mode} onClick={() => setGenerationMode(mode)}
                   className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition capitalize ${generationMode === mode ? "bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}>
-                  {mode === "daily" ? "Daily Range" : mode.charAt(0).toUpperCase() + mode.slice(1)}
+                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
                 </button>
               ))}
             </div>
             <div className="space-y-4">
               {generationMode === "daily" && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Start Date</label><input type="date" value={configStartDate} onChange={e => setConfigStartDate(e.target.value)} min={getLocalDate()} className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" /></div>
-                  <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">End Date</label><input type="date" value={configEndDate} onChange={e => setConfigEndDate(e.target.value)} min={configStartDate || getLocalDate()} className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" /></div>
+                <div className="grid grid-cols-1 gap-4">
+                  <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Date</label><input type="date" value={configStartDate} onChange={e => setConfigStartDate(e.target.value)} min={getLocalDate()} className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" /></div>
                 </div>
               )}
               {generationMode === "weekly" && (
@@ -273,6 +286,29 @@ export default function AdminAppointmentsPage() {
                             onChange={e => { if (e.target.checked) setSelectedDaysOfWeek([...selectedDaysOfWeek, idx]); else setSelectedDaysOfWeek(selectedDaysOfWeek.filter(d => d !== idx)); }} />
                           {day}
                         </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Monthly Mode */}
+              {generationMode === "monthly" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Select Month</label>
+                    <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} min={getLocalDate().slice(0, 7)} className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Select Dates</label>
+                    <div className="grid grid-cols-7 gap-1">
+                      {Array.from({ length: new Date(Number(selectedMonth.split('-')[0]), Number(selectedMonth.split('-')[1]), 0).getDate() }, (_, i) => i + 1).map(date => (
+                        <button key={date} type="button" onClick={() => {
+                          if (selectedDates.includes(date)) setSelectedDates(selectedDates.filter(d => d !== date));
+                          else setSelectedDates([...selectedDates, date]);
+                        }} className={`py-1.5 text-sm rounded-lg border transition ${selectedDates.includes(date) ? "bg-blue-50 border-blue-500 text-blue-700 font-bold dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300" : "border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"}`}>
+                          {date}
+                        </button>
                       ))}
                     </div>
                   </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
-import { Loader2, Edit2, Save, X, ArrowLeft } from "lucide-react";
+import { Loader2, Edit2, Save, X, ArrowLeft, Receipt, Printer, CreditCard } from "lucide-react";
 
 interface Appointment {
   id: string; token: string; startTime: string; endTime: string;
@@ -70,6 +70,11 @@ export default function PatientDetailPage() {
   const [idProofDetail, setIdProofDetail] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Billing Modal State
+  const [billingModal, setBillingModal] = useState(false);
+  const [paymentMode, setPaymentMode] = useState("CASH");
+  const [processingPayment, setProcessingPayment] = useState(false);
+
   function hydrate(p: Patient) {
     const idx = p.name.indexOf(" ");
     setFirstName(p.firstName || (idx === -1 ? p.name : p.name.slice(0, idx)));
@@ -109,6 +114,39 @@ export default function PatientDetailPage() {
       setPatient(updated); hydrate(updated); setEditing(false);
     } catch (err: any) { alert(err.response?.data?.message || "Save failed"); }
     finally { setSaving(false); }
+  }
+  async function processPayment() {
+    if (!patient) return;
+    setProcessingPayment(true);
+    try {
+      const unpaidAppointments = appointments.filter(a => a.paymentStatus === "UNPAID" || a.paymentStatus === "PENDING");
+      for (const apt of unpaidAppointments) {
+        await api.put(`/bookings/appointments/${apt.id}/pay`, { paymentMode });
+      }
+
+      // Handle unpaid registration if applicable
+      if (patient.registrationPaymentStatus === "UNPAID" || patient.registrationPaymentStatus === "PENDING") {
+        await api.put(`/patients/${patient.id}/pay`, { paymentMode });
+      }
+
+      alert("Payment successful!");
+      // Refresh data
+      const [pRes, aRes] = await Promise.all([
+        api.get(`/patients/${id}`),
+        api.get(`/bookings/appointments?patientId=${id}`).catch(() => ({ data: { data: [] } }))
+      ]);
+      setPatient(pRes.data.data);
+      setAppointments(aRes.data.data || []);
+      setBillingModal(false);
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Payment failed");
+    } finally {
+      setProcessingPayment(false);
+    }
+  }
+
+  function handlePrintBill() {
+    window.print();
   }
 
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-blue-500" size={40} /></div>;
@@ -207,8 +245,14 @@ export default function PatientDetailPage() {
       </div>
 
       {/* Upcoming Appointments */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
-        <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Upcoming Appointments</h3>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 relative">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-slate-900 dark:text-white">Upcoming Appointments</h3>
+          <button onClick={() => setBillingModal(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm hover:bg-indigo-700 transition font-medium shadow-md shadow-indigo-500/20">
+            <Receipt size={16} /> Open Billing
+          </button>
+        </div>
+
         {upcoming.length === 0 ? <p className="text-sm text-slate-500">No upcoming appointments</p> :
           upcoming.map(a => (
             <div key={a.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/30 rounded-xl mb-3 border border-slate-200 dark:border-slate-700">
@@ -244,6 +288,129 @@ export default function PatientDetailPage() {
             </div>
           ))}
       </div>
+
+      {/* Billing Modal */}
+      {billingModal && patient && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          {/* Add a specific cross-browser print styling class */}
+          <style dangerouslySetInnerHTML={{
+            __html: `
+            @media print {
+              body * { visibility: hidden; }
+              #printable-bill, #printable-bill * { visibility: visible; }
+              #printable-bill { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none !important; }
+              .no-print { display: none !important; }
+            }
+          `}} />
+
+          <div id="printable-bill" className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center no-print">
+              <h2 className="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
+                <Receipt className="text-indigo-500" /> Billing Details
+              </h2>
+              <button onClick={() => setBillingModal(false)} className="p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition"><X size={18} /></button>
+            </div>
+
+            <div className="p-6 overflow-y-auto">
+              {/* Printable Header */}
+              <div className="text-center mb-6 pb-6 border-b border-slate-200 dark:border-slate-800 border-dashed">
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-wider">Hospital Name</h1>
+                <p className="text-sm text-slate-500">123 Health Ave, Medical District</p>
+                <p className="text-sm text-slate-500">Contact: +91 9876543210</p>
+                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/50 flex justify-between text-left text-sm">
+                  <div>
+                    <p><span className="text-slate-500">Patient:</span> <span className="font-bold text-slate-900 dark:text-white">{patient.name}</span></p>
+                    <p><span className="text-slate-500">UHID:</span> {patient.uhid}</p>
+                  </div>
+                  <div className="text-right">
+                    <p><span className="text-slate-500">Date:</span> {new Date().toLocaleDateString("en-IN")}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-wider mb-2">Particulars</h3>
+
+                {/* Registration Fee */}
+                {patient.registrationAmount && patient.registrationAmount > 0 ? (
+                  <div className="flex justify-between items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800">
+                    <div>
+                      <p className="font-medium text-slate-900 dark:text-white">Registration Fee</p>
+                      {patient.registrationPaymentStatus === "PAID" ? (
+                        <p className="text-xs text-emerald-600 font-medium mt-0.5">Already Paid</p>
+                      ) : (
+                        <p className="text-xs text-orange-600 font-medium mt-0.5">Unpaid</p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className={`font-medium ${patient.registrationPaymentStatus === "PAID" ? 'text-slate-400 line-through' : 'text-slate-900 dark:text-white'}`}>₹{patient.registrationAmount}</p>
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Consultation Fees */}
+                {appointments.filter(a => a.status === "BOOKED" || a.status === "CHECKED_IN").map(apt => (
+                  <div key={apt.id} className="flex justify-between items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800">
+                    <div>
+                      <p className="font-medium text-slate-900 dark:text-white">Consultation: Dr. {apt.doctor?.name}</p>
+                      <p className="text-sm text-slate-500 mt-0.5">{new Date(apt.startTime).toLocaleDateString("en-IN")} - Token {apt.token}</p>
+                      {apt.paymentStatus === "PAID" ? (
+                        <p className="text-xs text-emerald-600 font-medium mt-0.5">Already Paid</p>
+                      ) : (
+                        <p className="text-xs text-orange-600 font-medium mt-0.5">Unpaid</p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className={`font-medium ${apt.paymentStatus === "PAID" ? 'text-slate-400 line-through' : 'text-slate-900 dark:text-white'}`}>₹{apt.totalAmount}</p>
+                    </div>
+                  </div>
+                ))}
+
+                {(() => {
+                  let totalDue = 0;
+                  if (patient.registrationPaymentStatus !== "PAID") totalDue += patient.registrationAmount || 0;
+                  appointments.filter(a => a.status === "BOOKED" || a.status === "CHECKED_IN" || a.status === "COMPLETED").forEach(a => {
+                    if (a.paymentStatus !== "PAID") totalDue += a.totalAmount;
+                  });
+
+                  return (
+                    <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-between items-end">
+                      <div>
+                        <p className="text-sm text-slate-500">Total Amount Due</p>
+                        {totalDue === 0 && <p className="text-xs text-emerald-600 font-medium bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded inline-block mt-1">All Clear</p>}
+                      </div>
+                      <p className="text-2xl font-bold text-slate-900 dark:text-white">₹{totalDue}</p>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
+            <div className="p-5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex flex-col sm:flex-row gap-3 items-center justify-between no-print">
+              <div className="w-full sm:w-auto flex items-center gap-2">
+                <select value={paymentMode} onChange={e => setPaymentMode(e.target.value)} className="border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm flex-1">
+                  <option value="CASH">Cash</option>
+                  <option value="CREDIT">Card</option>
+                  <option value="UPI">UPI</option>
+                </select>
+              </div>
+              <div className="flex w-full sm:w-auto gap-2">
+                <button onClick={handlePrintBill} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-sm font-medium hover:bg-slate-50 transition shadow-sm">
+                  <Printer size={16} /> Print Bill
+                </button>
+                <button
+                  onClick={processPayment}
+                  disabled={processingPayment}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded-xl text-sm hover:bg-emerald-700 transition font-medium shadow-md shadow-emerald-500/20 disabled:opacity-50"
+                >
+                  {processingPayment ? <Loader2 className="animate-spin" size={16} /> : <CreditCard size={16} />}
+                  {processingPayment ? "Processing..." : "Confirm Payment"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
