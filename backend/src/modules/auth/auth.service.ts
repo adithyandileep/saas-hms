@@ -33,7 +33,7 @@ export class AuthService {
 
   async checkSetupRequired(): Promise<boolean> {
     const superAdminExists = await this.repository.checkSuperAdminExists();
-    console.log(superAdminExists);
+    console.log('SUPERADMIN EXISTS: ', superAdminExists);
     return !superAdminExists;
   }
 

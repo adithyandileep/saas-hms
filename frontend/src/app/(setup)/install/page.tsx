@@ -87,7 +87,7 @@ export default function InstallPage() {
             <label className="block text-sm font-medium text-gray-700">Organization Name</label>
             <input 
               {...form.register("organizationName")} 
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border" 
+              className="mt-1 block w-full rounded-md placeholder:text-black/60 text-black border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border" 
               placeholder="e.g. City General Hospital"
             />
             {form.formState.errors.organizationName && <p className="text-red-500 text-xs mt-1">{form.formState.errors.organizationName.message}</p>}
@@ -96,7 +96,7 @@ export default function InstallPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Timezone</label>
-              <select {...form.register("timezone")} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border">
+              <select {...form.register("timezone")} className="mt-1 block w-full rounded-md placeholder:text-black/60 text-black  border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border">
                 <option value="UTC">UTC</option>
                 <option value="America/New_York">EST</option>
                 <option value="Asia/Kolkata">IST</option>
@@ -104,7 +104,7 @@ export default function InstallPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Currency</label>
-              <select {...form.register("currency")} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border">
+              <select {...form.register("currency")} className="mt-1 placeholder:text-black/60 text-black  block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border">
                 <option value="USD">USD ($)</option>
                 <option value="INR">INR (₹)</option>
                 <option value="EUR">EUR (€)</option>
@@ -156,7 +156,7 @@ export default function InstallPage() {
             <label className="block text-sm font-medium text-gray-700">SuperAdmin Username</label>
             <input 
               {...form.register("superAdminUsername")} 
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border" 
+              className="mt-1 block w-full rounded-md placeholder:text-black/60 text-black border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border" 
             />
           </div>
 
@@ -165,7 +165,7 @@ export default function InstallPage() {
             <input 
               type="password"
               {...form.register("superAdminPassword")} 
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border" 
+              className="mt-1 block w-full rounded-md placeholder:text-black/60 text-black border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border" 
             />
             {form.formState.errors.superAdminPassword && <p className="text-red-500 text-xs mt-1">{form.formState.errors.superAdminPassword.message}</p>}
           </div>
