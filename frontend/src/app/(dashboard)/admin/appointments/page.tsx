@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
-import { Loader2, Calendar, Search, Settings } from "lucide-react";
+import { Loader2, Calendar, Search, Settings, UserCheck } from "lucide-react";
 
 interface Doctor {
   id: string;
@@ -13,7 +14,12 @@ interface Doctor {
 interface Patient { id: string; uhid: string; name: string; contactNo?: string | null; }
 interface Slot { id: string; startTime: string; endTime: string; maxCapacity: number; bookedCount: number; isAvailable: boolean; }
 
-export default function AdminAppointmentsPage() {
+function AdminAppointmentsContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const prefillPatientId = searchParams.get("patientId") || "";
+  const prefillPatientName = searchParams.get("patientName") || "";
+
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [selectedDoctorId, setSelectedDoctorId] = useState("");
@@ -34,7 +40,7 @@ export default function AdminAppointmentsPage() {
   const [bookSubmitting, setBookSubmitting] = useState(false);
   const [bookPaymentMode, setBookPaymentMode] = useState("CASH");
 
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(prefillPatientName);
   const [searchResults, setSearchResults] = useState<Patient[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -45,12 +51,14 @@ export default function AdminAppointmentsPage() {
   const [slotEndTime, setSlotEndTime] = useState("17:00");
   const [slotInterval, setSlotInterval] = useState(15);
   const [slotSubmitting, setSlotSubmitting] = useState(false);
-  const [bookSubmitting, setBookSubmitting] = useState(false);
   const [configStartDate, setConfigStartDate] = useState(getLocalDate());
   const [configEndDate, setConfigEndDate] = useState(getLocalDate());
   const [selectedMonth, setSelectedMonth] = useState(getLocalDate().slice(0, 7));
   const [selectedDaysOfWeek, setSelectedDaysOfWeek] = useState<number[]>([]);
   const [selectedDates, setSelectedDates] = useState<number[]>([]);
+
+  // Pre-fill from query params (after registration flow)
+  const [lockedPatient, setLockedPatient] = useState<Patient | null>(null);
 
   useEffect(() => {
     api.get("/doctors").then(r => {
@@ -59,6 +67,21 @@ export default function AdminAppointmentsPage() {
       if (docs.length) setSelectedDoctorId(docs[0].id);
     }).catch(console.error);
   }, []);
+
+  // If patientId is passed from registration flow, fetch and lock that patient
+  useEffect(() => {
+    if (prefillPatientId) {
+      api.get(`/patients/${prefillPatientId}`).then(r => {
+        const p = r.data.data;
+        if (p) {
+          const patient: Patient = { id: p.id, uhid: p.uhid, name: p.name, contactNo: p.contactNo };
+          setLockedPatient(patient);
+          setSelectedPatient(patient);
+          setQuery(p.name);
+        }
+      }).catch(console.error);
+    }
+  }, [prefillPatientId]);
 
   useEffect(() => { if (selectedDoctorId && selectedDate) loadSlots(); }, [selectedDoctorId, selectedDate]);
 
@@ -71,7 +94,7 @@ export default function AdminAppointmentsPage() {
   }
 
   useEffect(() => {
-    if (!query.trim()) { setSearchResults([]); setShowDropdown(false); return; }
+    if (!query.trim() || lockedPatient) { setSearchResults([]); setShowDropdown(false); return; }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       setSearching(true);
@@ -82,20 +105,23 @@ export default function AdminAppointmentsPage() {
       } catch { } finally { setSearching(false); }
     }, 300);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [query]);
+  }, [query, lockedPatient]);
 
   function openBooking(slot: Slot) {
     if (new Date(slot.endTime) < new Date()) { alert("Cannot book a past slot"); return; }
     setSelectedSlot(slot); setBookingModal(true);
-    setQuery(""); setSelectedPatient(null); setShowDropdown(false);
+    if (!lockedPatient) { setQuery(""); setSelectedPatient(null); setShowDropdown(false); }
   }
 
   async function confirmBooking() {
     if (!selectedSlot || !selectedPatient || !selectedDoctorId) { alert("Select patient and slot"); return; }
     setBookSubmitting(true); setMessage("");
     try {
-      const res = await api.post("/bookings/book", { patientId: selectedPatient.id, doctorId: selectedDoctorId, slotId: selectedSlot.id, paymentMode: bookPaymentMode });
-      setBookingModal(false); setSelectedSlot(null); setSelectedPatient(null);
+      await api.post("/bookings/book", { patientId: selectedPatient.id, doctorId: selectedDoctorId, slotId: selectedSlot.id, paymentMode: bookPaymentMode });
+      setBookingModal(false); setSelectedSlot(null);
+      // Reload slots to reflect updated availability
+      await loadSlots();
+      // Redirect to patient detail page
       router.push(`/admin/patients/${selectedPatient.id}`);
     } catch (err: any) { setMessage(`❌ ${err.response?.data?.message || "Booking failed"}`); }
     finally { setBookSubmitting(false); }
@@ -127,7 +153,6 @@ export default function AdminAppointmentsPage() {
       }
       await api.post("/bookings/slots/bulk", payload);
       setSlotModal(false);
-      // Auto-switch date logic and refresh
       if (generationMode === "daily") {
         if (selectedDate === configStartDate) loadSlots();
         else setSelectedDate(configStartDate);
@@ -157,6 +182,20 @@ export default function AdminAppointmentsPage() {
         <Calendar className="text-blue-500" /> Appointments
         <span className="ml-2 px-3 py-1 text-sm font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-full">All Doctors</span>
       </h1>
+
+      {/* Patient registration flow banner */}
+      {lockedPatient && (
+        <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl">
+          <UserCheck className="text-blue-500 shrink-0" size={20} />
+          <div className="flex-1">
+            <p className="font-semibold text-blue-800 dark:text-blue-300">Booking appointment for newly registered patient</p>
+            <p className="text-sm text-blue-600 dark:text-blue-400">{lockedPatient.name} · <span className="font-mono">{lockedPatient.uhid}</span></p>
+          </div>
+          <button onClick={() => { setLockedPatient(null); setQuery(""); setSelectedPatient(null); }} className="text-xs text-blue-500 hover:text-blue-700 border border-blue-300 dark:border-blue-700 rounded-lg px-3 py-1.5 transition">
+            Change Patient
+          </button>
+        </div>
+      )}
 
       {message && (
         <div className={`p-4 rounded-xl text-sm font-medium ${message.startsWith("✅") ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400" : "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400"}`}>{message}</div>
@@ -219,32 +258,55 @@ export default function AdminAppointmentsPage() {
             <p className="text-sm text-slate-500 mb-4">
               Dr. {selectedDoctor?.name} · {new Date(selectedSlot.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} – {new Date(selectedSlot.endTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
             </p>
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <input value={query} onChange={e => { setQuery(e.target.value); setSelectedPatient(null); }}
-                placeholder="Search patient by name or UHID..."
-                className="w-full pl-9 pr-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-slate-400" size={16} />}
-            </div>
-            {selectedPatient && (
+
+            {lockedPatient ? (
               <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
-                <p className="font-medium text-blue-800 dark:text-blue-300">{selectedPatient.name}</p>
-                <p className="text-xs text-blue-600 dark:text-blue-400 font-mono">{selectedPatient.uhid}</p>
+                <p className="text-xs text-blue-500 font-medium uppercase tracking-wider mb-1">Patient</p>
+                <p className="font-semibold text-blue-800 dark:text-blue-300">{lockedPatient.name}</p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 font-mono">{lockedPatient.uhid}</p>
               </div>
+            ) : (
+              <>
+                <div className="relative mb-4">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input value={query} onChange={e => { setQuery(e.target.value); setSelectedPatient(null); }}
+                    placeholder="Search patient by name or UHID..."
+                    className="w-full pl-9 pr-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-slate-400" size={16} />}
+                </div>
+                {selectedPatient && (
+                  <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                    <p className="font-medium text-blue-800 dark:text-blue-300">{selectedPatient.name}</p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 font-mono">{selectedPatient.uhid}</p>
+                  </div>
+                )}
+                {showDropdown && searchResults.length > 0 && (
+                  <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden max-h-48 overflow-y-auto mb-4">
+                    {searchResults.map(p => (
+                      <button key={p.id} onMouseDown={e => { e.preventDefault(); setSelectedPatient(p); setQuery(p.name); setShowDropdown(false); }}
+                        className="w-full text-left p-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b border-slate-100 dark:border-slate-800 last:border-0 transition">
+                        <div className="font-medium text-sm text-slate-900 dark:text-white">{highlightMatch(p.name, query)}</div>
+                        <div className="text-xs text-slate-500 font-mono">{highlightMatch(p.uhid, query)} {p.contactNo && `· ${p.contactNo}`}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
-            {showDropdown && searchResults.length > 0 && (
-              <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden max-h-48 overflow-y-auto mb-4">
-                {searchResults.map(p => (
-                  <button key={p.id} onMouseDown={e => { e.preventDefault(); setSelectedPatient(p); setQuery(p.name); setShowDropdown(false); }}
-                    className="w-full text-left p-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b border-slate-100 dark:border-slate-800 last:border-0 transition">
-                    <div className="font-medium text-sm text-slate-900 dark:text-white">{highlightMatch(p.name, query)}</div>
-                    <div className="text-xs text-slate-500 font-mono">{highlightMatch(p.uhid, query)} {p.contactNo && `· ${p.contactNo}`}</div>
-                  </button>
-                ))}
-              </div>
-            )}
+
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-slate-500 mb-1">Payment Mode</label>
+              <select value={bookPaymentMode} onChange={e => setBookPaymentMode(e.target.value)} className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
+                <option value="CASH">Cash</option>
+                <option value="CREDIT">Card</option>
+                <option value="UPI">UPI</option>
+              </select>
+            </div>
+
+            {message && <p className="text-sm text-red-600 dark:text-red-400 mb-3">{message}</p>}
+
             <div className="flex gap-3 justify-end pt-2 border-t border-slate-200 dark:border-slate-800">
-              <button onClick={() => { setBookingModal(false); setSelectedSlot(null); setSelectedPatient(null); setQuery(""); }}
+              <button onClick={() => { setBookingModal(false); setSelectedSlot(null); if (!lockedPatient) { setSelectedPatient(null); setQuery(""); } }}
                 className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition">Cancel</button>
               <button onClick={confirmBooking} disabled={!selectedPatient || bookSubmitting}
                 className="px-6 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition flex items-center gap-2">
@@ -292,7 +354,6 @@ export default function AdminAppointmentsPage() {
                 </div>
               )}
 
-              {/* Monthly Mode */}
               {generationMode === "monthly" && (
                 <div className="space-y-4">
                   <div>
@@ -330,5 +391,13 @@ export default function AdminAppointmentsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AdminAppointmentsPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="animate-spin text-blue-500" size={36} /></div>}>
+      <AdminAppointmentsContent />
+    </Suspense>
   );
 }

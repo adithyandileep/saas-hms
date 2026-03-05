@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
-import { Loader2, Calendar, Search, Settings } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Loader2, Calendar, Search, Settings, UserCheck } from "lucide-react";
 
 interface Doctor {
   id: string;
@@ -14,7 +14,12 @@ interface Doctor {
 interface Patient { id: string; uhid: string; name: string; contactNo?: string | null; }
 interface Slot { id: string; startTime: string; endTime: string; maxCapacity: number; bookedCount: number; isAvailable: boolean; }
 
-export default function ReceptionistAppointmentsPage() {
+function ReceptionistAppointmentsContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const prefillPatientId = searchParams.get("patientId") || "";
+  const prefillPatientName = searchParams.get("patientName") || "";
+
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [selectedDoctorId, setSelectedDoctorId] = useState("");
@@ -31,12 +36,13 @@ export default function ReceptionistAppointmentsPage() {
   const [message, setMessage] = useState("");
 
   // Live patient search
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(prefillPatientName);
   const [searchResults, setSearchResults] = useState<Patient[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [searching, setSearching] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [lockedPatient, setLockedPatient] = useState<Patient | null>(null);
 
   // Slot creation form - Enhanced Multi-Mode
   const [generationMode, setGenerationMode] = useState<"daily" | "weekly" | "monthly">("daily");
@@ -45,15 +51,13 @@ export default function ReceptionistAppointmentsPage() {
   const [slotInterval, setSlotInterval] = useState(15);
   const [slotSubmitting, setSlotSubmitting] = useState(false);
   const [bookSubmitting, setBookSubmitting] = useState(false);
-  const [bookPaymentMode, setBookPaymentMode] = useState("CASH"); // New state for payment mode
+  const [bookPaymentMode, setBookPaymentMode] = useState("CASH");
 
   const [configStartDate, setConfigStartDate] = useState(getLocalDate());
   const [configEndDate, setConfigEndDate] = useState(getLocalDate());
   const [selectedMonth, setSelectedMonth] = useState(getLocalDate().slice(0, 7));
   const [selectedDaysOfWeek, setSelectedDaysOfWeek] = useState<number[]>([]);
   const [selectedDates, setSelectedDates] = useState<number[]>([]);
-
-  const router = useRouter(); // Initialize useRouter
 
   useEffect(() => {
     api.get("/doctors").then(r => {
@@ -62,6 +66,21 @@ export default function ReceptionistAppointmentsPage() {
       if (docs.length) setSelectedDoctorId(docs[0].id);
     }).catch(console.error);
   }, []);
+
+  // Pre-fill patient from registration flow
+  useEffect(() => {
+    if (prefillPatientId) {
+      api.get(`/patients/${prefillPatientId}`).then(r => {
+        const p = r.data.data;
+        if (p) {
+          const patient: Patient = { id: p.id, uhid: p.uhid, name: p.name, contactNo: p.contactNo };
+          setLockedPatient(patient);
+          setSelectedPatient(patient);
+          setQuery(p.name);
+        }
+      }).catch(console.error);
+    }
+  }, [prefillPatientId]);
 
   useEffect(() => { if (selectedDoctorId && selectedDate) loadSlots(); }, [selectedDoctorId, selectedDate]);
 
@@ -75,7 +94,7 @@ export default function ReceptionistAppointmentsPage() {
 
   // Debounced patient search
   useEffect(() => {
-    if (!query.trim()) { setSearchResults([]); setShowDropdown(false); return; }
+    if (!query.trim() || lockedPatient) { setSearchResults([]); setShowDropdown(false); return; }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       setSearching(true);
@@ -86,24 +105,23 @@ export default function ReceptionistAppointmentsPage() {
       } catch { } finally { setSearching(false); }
     }, 300);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [query]);
+  }, [query, lockedPatient]);
 
   function openBooking(slot: Slot) {
     if (new Date(slot.endTime) < new Date()) { alert("Cannot book a past slot"); return; }
     setSelectedSlot(slot); setBookingModal(true);
-    setQuery(""); setSelectedPatient(null); setShowDropdown(false);
-    setBookPaymentMode("CASH"); // Reset payment mode when opening modal
+    if (!lockedPatient) { setQuery(""); setSelectedPatient(null); setShowDropdown(false); }
+    setBookPaymentMode("CASH");
   }
 
   async function confirmBooking() {
     if (!selectedSlot || !selectedPatient || !selectedDoctorId) { alert("Select patient and slot"); return; }
     setBookSubmitting(true); setMessage("");
     try {
-      const res = await api.post("/bookings/book", { patientId: selectedPatient.id, doctorId: selectedDoctorId, slotId: selectedSlot.id, paymentMode: bookPaymentMode });
+      await api.post("/bookings/book", { patientId: selectedPatient.id, doctorId: selectedDoctorId, slotId: selectedSlot.id, paymentMode: bookPaymentMode });
       setBookingModal(false); setSelectedSlot(null); setSelectedPatient(null);
-      setMessage("✅ Appointment booked successfully!");
-      loadSlots(); // Refresh slots after booking
-      router.push(`/receptionist/patients/${selectedPatient.id}`);
+      await loadSlots(); // Refresh slots
+      router.push(`/admin/patients/${selectedPatient.id}`); // Use admin patient detail since no receptionist [id] page
     } catch (err: any) { setMessage(`❌ ${err.response?.data?.message || "Booking failed"}`); }
     finally { setBookSubmitting(false); }
   }
@@ -170,6 +188,20 @@ export default function ReceptionistAppointmentsPage() {
       <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
         <Calendar className="text-blue-500" /> Appointments
       </h1>
+
+      {/* Patient registration flow banner */}
+      {lockedPatient && (
+        <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl">
+          <UserCheck className="text-blue-500 shrink-0" size={20} />
+          <div className="flex-1">
+            <p className="font-semibold text-blue-800 dark:text-blue-300">Booking appointment for newly registered patient</p>
+            <p className="text-sm text-blue-600 dark:text-blue-400">{lockedPatient.name} · <span className="font-mono">{lockedPatient.uhid}</span></p>
+          </div>
+          <button onClick={() => { setLockedPatient(null); setQuery(""); setSelectedPatient(null); }} className="text-xs text-blue-500 hover:text-blue-700 border border-blue-300 dark:border-blue-700 rounded-lg px-3 py-1.5 transition">
+            Change Patient
+          </button>
+        </div>
+      )}
 
       {message && (
         <div className={`p-4 rounded-xl text-sm font-medium ${message.startsWith("✅") ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400" : "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400"}`}>{message}</div>
@@ -391,5 +423,13 @@ export default function ReceptionistAppointmentsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ReceptionistAppointmentsPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="animate-spin text-blue-500" size={36} /></div>}>
+      <ReceptionistAppointmentsContent />
+    </Suspense>
   );
 }

@@ -143,7 +143,7 @@ export default function ReceptionistPatientsPage() {
 
     setSubmitting(true);
     try {
-      await api.post("/patients/register", {
+      const res = await api.post("/patients/register", {
         name: `${firstName.trim()} ${lastName.trim()}`.trim(),
         firstName: firstName.trim(), lastName: lastName.trim(),
         age, dob,
@@ -158,11 +158,13 @@ export default function ReceptionistPatientsPage() {
         idProofType, idProofDetail, idProofData: idProofFile,
         registrationAmount: Number(registrationAmount),
       });
+
+      const newPatient = res.data?.data;
       setShowForm(false);
 
-      const newPatientId = res.data?.data?.id;
-      if (newPatientId) {
-        router.push(`/receptionist/appointments?patientId=${newPatientId}`);
+      if (newPatient?.id) {
+        const name = encodeURIComponent(newPatient.name || `${firstName} ${lastName}`.trim());
+        router.push(`/receptionist/appointments?patientId=${newPatient.id}&patientName=${name}`);
         return;
       }
 

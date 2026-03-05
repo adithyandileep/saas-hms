@@ -71,7 +71,7 @@ export default function AdminBillingPage() {
                   </td>
                   <td className="px-4 py-3">
                     <p className="text-slate-700 dark:text-slate-300">Dr. {a.doctor?.name}</p>
-                    <p className="text-xs text-slate-500">{a.doctor?.department}</p>
+                    <p className="text-xs text-slate-500">{typeof a.doctor?.department === 'object' ? (a.doctor?.department as any)?.name : a.doctor?.department}</p>
                   </td>
                   <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white">₹{a.totalAmount}</td>
                   <td className="px-4 py-3 font-semibold text-emerald-600">₹{a.paidAmount}</td>

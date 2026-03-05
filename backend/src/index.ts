@@ -82,7 +82,7 @@ app.post('/api/upload', authenticate, upload.single('file'), (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'Hospital Management API is running' });
+  res.status(200).json({ status: 'ok', message: 'Hospital Management API is running from 05.03.2026' });
 });
 
 app.listen(port, () => {

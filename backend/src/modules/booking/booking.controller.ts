@@ -69,6 +69,7 @@ export class BookingController {
     try {
       const userId = req.user?.userId;
       const role = req.user?.role;
+      const patientId = req.query.patientId ? String(req.query.patientId) : undefined;
       
       let appointments;
       
@@ -77,13 +78,20 @@ export class BookingController {
         const profile = await prisma.doctorProfile.findFirst({ where: { userId } });
         if (!profile) { res.status(404).json({ message: 'Doctor profile not found' }); return; }
         appointments = await prisma.appointment.findMany({
-          where: { doctorId: profile.id },
-          include: { patient: { select: { name: true, uhid: true } } },
+          where: { 
+            doctorId: profile.id,
+            ...(patientId ? { patientId } : {})
+          },
+          include: { 
+            patient: { select: { name: true, uhid: true } },
+            doctor: { select: { name: true, department: true } }
+          },
           orderBy: { startTime: 'asc' }
         });
       } else {
-        // Admin sees all appointments
+        // Admin/Receptionist/SuperAdmin: support optional patientId filter
         appointments = await prisma.appointment.findMany({
+          where: patientId ? { patientId } : {},
           include: { 
             patient: { select: { name: true, uhid: true } },
             doctor: { select: { name: true, department: true } }
