@@ -127,6 +127,7 @@ function ReceptionistAppointmentsContent() {
   }
 
   async function createSlot() {
+    if (!selectedDoctorId) { alert("No doctor selected. Please wait for the doctor list to load."); return; }
     if (!slotStartTime || !slotEndTime || !slotInterval) { alert("Set time and interval"); return; }
     setSlotSubmitting(true);
     try {
@@ -225,7 +226,7 @@ function ReceptionistAppointmentsContent() {
             <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
           </div>
           <div className="ml-auto">
-            <button onClick={() => setSlotModal(true)} className="flex items-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+            <button onClick={() => setSlotModal(true)} disabled={!selectedDoctorId} className="flex items-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition disabled:opacity-50 disabled:cursor-not-allowed">
               <Settings size={16} /> Configure Slots
             </button>
           </div>

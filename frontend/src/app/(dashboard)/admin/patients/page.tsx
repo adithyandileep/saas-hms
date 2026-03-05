@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import api from "@/lib/api";
-import Link from "next/link";
-import { Plus, X, Loader2, Search, FileSpreadsheet, FileText, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, X, Loader2, Search, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface Patient {
@@ -386,25 +385,28 @@ export default function AdminPatientsPage() {
                       <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Contact</th>
                       <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Registered</th>
                       <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Payment</th>
-                      <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Actions</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">View</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                     {paginated.map(p => (
-                      <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
-                        <td className="px-4 py-3"><input type="checkbox" checked={selected.includes(p.id)} onChange={() => toggleSelect(p.id)} /></td>
+                      <tr key={p.id}
+                        onClick={() => router.push(`/admin/patients/${p.id}`)}
+                        className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition cursor-pointer group"
+                      >
+                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selected.includes(p.id)} onChange={() => toggleSelect(p.id)} /></td>
                         <td className="px-4 py-3 font-mono text-blue-600 dark:text-blue-400 font-medium">{p.uhid}</td>
-                        <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{p.name}</td>
+                        <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
+                          <span>{p.name}</span>
+                          <span className="ml-2 text-xs text-blue-500 opacity-0 group-hover:opacity-100 transition">View →</span>
+                        </td>
                         <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{p.contactNo || "-"}</td>
                         <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{new Date(p.createdAt).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "2-digit" })}</td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.registrationPaymentStatus === "PAID" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"}`}>{p.registrationPaymentStatus}</span>
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <Link href={`/admin/patients/${p.id}`} className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition">Open</Link>
-                            <button onClick={() => setDeleteModal(p.id)} className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 transition">Delete</button>
-                          </div>
+                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                          <button onClick={() => setDeleteModal(p.id)} className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 transition">Delete</button>
                         </td>
                       </tr>
                     ))}

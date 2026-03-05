@@ -365,17 +365,21 @@ export default function ReceptionistPatientsPage() {
                       <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Contact</th>
                       <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Registered</th>
                       <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Payment</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                     {paginated.map(p => (
-                      <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
+                      <tr key={p.id} onClick={() => router.push(`/receptionist/patients/${p.id}`)} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition cursor-pointer">
                         <td className="px-4 py-3 font-mono text-blue-600 dark:text-blue-400 font-medium">{p.uhid}</td>
                         <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{p.name}</td>
                         <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{p.contactNo || "-"}</td>
                         <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{new Date(p.createdAt).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "2-digit" })}</td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.registrationPaymentStatus === "PAID" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"}`}>{p.registrationPaymentStatus}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline">View →</span>
                         </td>
                       </tr>
                     ))}

@@ -84,7 +84,8 @@ export class BookingController {
           },
           include: { 
             patient: { select: { name: true, uhid: true } },
-            doctor: { select: { name: true, department: true } }
+            doctor: { select: { name: true, department: true } },
+            visit: { select: { id: true, chiefComplaint: true, diagnosis: true, medications: true, notes: true, status: true } }
           },
           orderBy: { startTime: 'asc' }
         });
@@ -94,7 +95,8 @@ export class BookingController {
           where: patientId ? { patientId } : {},
           include: { 
             patient: { select: { name: true, uhid: true } },
-            doctor: { select: { name: true, department: true } }
+            doctor: { select: { name: true, department: true } },
+            visit: { select: { id: true, chiefComplaint: true, diagnosis: true, medications: true, notes: true, status: true } }
           },
           orderBy: { startTime: 'desc' }
         });

@@ -33,14 +33,10 @@ export default function DoctorAppointmentsPage() {
   async function handleAcknowledge(appt: Appointment) {
     setAcknowledging(appt.id);
     try {
-      // Create (or get existing) visit → redirects to visit page
-      const res = await api.post("/visits", {
-        appointmentId: appt.id,
-        patientId: appt.patient.id,
-        doctorId: "", // server derives from appointment
-      });
-      const visitId = res.data.data.id;
-      router.push(`/doctor/appointments/${appt.patient.id}/visit/${visitId}`);
+      // Create (or get existing) visit
+      await api.post("/visits", { appointmentId: appt.id });
+      // Navigate to the consultation page using appointment ID (same as doctor dashboard)
+      router.push(`/doctor/consultation/${appt.id}`);
     } catch (err: any) {
       alert(err.response?.data?.message || "Failed to acknowledge");
     } finally { setAcknowledging(null); }
@@ -93,7 +89,7 @@ export default function DoctorAppointmentsPage() {
           )}
           {isInProgress && (
             <button
-              onClick={() => router.push(`/doctor/appointments/${a.patient.id}/visit/${a.visit!.id}`)}
+              onClick={() => router.push(`/doctor/consultation/${a.id}`)}
               className="px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-medium hover:bg-amber-600 transition"
             >
               Continue Visit
@@ -101,7 +97,7 @@ export default function DoctorAppointmentsPage() {
           )}
           {isCompleted && (
             <button
-              onClick={() => router.push(`/doctor/appointments/${a.patient.id}/visit/${a.visit!.id}`)}
+              onClick={() => router.push(`/doctor/consultation/${a.id}`)}
               className="px-4 py-2 bg-slate-600 text-white rounded-xl text-sm font-medium hover:bg-slate-700 transition"
             >
               View Notes

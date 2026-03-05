@@ -4,12 +4,20 @@ import { useState, useEffect, use } from "react";
 import api from "@/lib/api";
 import { Loader2, Download, CreditCard, CheckCircle, Clock } from "lucide-react";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
-import { UserOptions } from "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
-interface jsPDFWithAutoTable extends jsPDF {
-  autoTable: (options: UserOptions) => void;
-  lastAutoTable: { finalY: number };
+// jspdf-autotable extends jsPDF's prototype, adding lastAutoTable.
+// We declare it here to avoid TS 'any' type errors.
+declare module "jspdf" {
+  interface jsPDF {
+    lastAutoTable?: { finalY: number };
+  }
+}
+
+
+function deptStr(dept: string | { id?: string; name?: string; description?: string } | undefined | null): string {
+  if (!dept) return "";
+  return typeof dept === "object" ? dept.name || "" : dept;
 }
 
 interface VisitInfo {
@@ -38,7 +46,7 @@ interface AppointmentDetails {
   paymentStatus: string;
   status: string;
   patient: { name: string; uhid: string; contactNo: string; address: string };
-  doctor: { name: string; department: string; consultationFee: number };
+  doctor: { name: string; department: string | { id?: string; name?: string; description?: string }; consultationFee?: number };
   visit: VisitInfo | null;
   payments: PaymentInfo[];
 }
@@ -133,17 +141,17 @@ export default function ReceptionistBillingDetailsPage({ params }: { params: Pro
     doc.text("Service By:", pageWidth / 2, 55);
     doc.setFont("helvetica", "normal");
     doc.text(`Dr. ${data.doctor.name}`, pageWidth / 2, 62);
-    doc.text(`Department: ${data.doctor.department}`, pageWidth / 2, 67);
+    doc.text(`Department: ${deptStr(data.doctor.department)}`, pageWidth / 2, 67);
     doc.text(`Doc Token: ${data.token}`, pageWidth / 2, 72);
 
     // Items table
-    (doc as jsPDFWithAutoTable).autoTable({
+    autoTable(doc, {
         startY: 85,
         headStyles: { fillColor: [59, 130, 246] },
         head: [["Description", "Amount"]],
         body: [
-            ["Doctor Consultation Fee", `Rs. ${data.doctor.consultationFee.toFixed(2)}`],
-            ["Registration & Other Charges", `Rs. ${(data.totalAmount - data.doctor.consultationFee).toFixed(2)}`],
+            ["Doctor Consultation Fee", `Rs. ${(data.doctor.consultationFee ?? data.totalAmount).toFixed(2)}`],
+            ["Registration & Other Charges", `Rs. ${(data.totalAmount - (data.doctor.consultationFee ?? data.totalAmount)).toFixed(2)}`],
         ],
         foot: [
             ["Sub Total", `Rs. ${data.totalAmount.toFixed(2)}`],
@@ -154,13 +162,13 @@ export default function ReceptionistBillingDetailsPage({ params }: { params: Pro
         theme: "striped"
     });
 
-    const finalY = (doc as jsPDFWithAutoTable).lastAutoTable.finalY + 15;
+    const finalY = doc.lastAutoTable?.finalY ?? 120;
 
     // Payment History Table
     if (data.payments && data.payments.length > 0) {
         doc.setFont("helvetica", "bold");
         doc.text("Payment History:", 14, finalY);
-        (doc as jsPDFWithAutoTable).autoTable({
+        autoTable(doc, {
             startY: finalY + 5,
             head: [["Date", "Mode", "Txn ID", "Amount"]],
             body: data.payments.map(p => [
@@ -175,7 +183,7 @@ export default function ReceptionistBillingDetailsPage({ params }: { params: Pro
         });
     }
 
-    const payY = (doc as jsPDFWithAutoTable).lastAutoTable ? (doc as jsPDFWithAutoTable).lastAutoTable.finalY + 15 : finalY + 15;
+    const payY = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 15 : finalY + 15;
 
     // Summary block
     doc.setFont("helvetica", "normal");
@@ -224,7 +232,7 @@ export default function ReceptionistBillingDetailsPage({ params }: { params: Pro
                     <div>
                         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Service Details</p>
                         <p className="font-bold text-slate-900 dark:text-white text-lg">Dr. {data.doctor.name}</p>
-                        <p className="text-sm text-slate-500">{data.doctor.department}</p>
+                        <p className="text-sm text-slate-500">{deptStr(data.doctor.department)}</p>
                         <p className="text-sm mt-1">Date: <span className="font-medium text-slate-700 dark:text-slate-300">{new Date(data.startTime).toLocaleDateString()}</span></p>
                     </div>
                 </div>
@@ -239,12 +247,12 @@ export default function ReceptionistBillingDetailsPage({ params }: { params: Pro
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                         <tr>
                             <td className="py-4 text-sm font-medium text-slate-900 dark:text-white">Doctor Consultation</td>
-                            <td className="py-4 text-sm font-medium text-slate-900 dark:text-white text-right">₹{data.doctor.consultationFee.toFixed(2)}</td>
+                            <td className="py-4 text-sm font-medium text-slate-900 dark:text-white text-right">₹{(data.doctor.consultationFee ?? data.totalAmount).toFixed(2)}</td>
                         </tr>
-                        {data.totalAmount > data.doctor.consultationFee && (
+                        {data.totalAmount > (data.doctor.consultationFee ?? data.totalAmount) && (
                         <tr>
                             <td className="py-4 text-sm font-medium text-slate-900 dark:text-white">Registration & Overheads</td>
-                            <td className="py-4 text-sm font-medium text-slate-900 dark:text-white text-right">₹{(data.totalAmount - data.doctor.consultationFee).toFixed(2)}</td>
+                            <td className="py-4 text-sm font-medium text-slate-900 dark:text-white text-right">₹{(data.totalAmount - (data.doctor.consultationFee ?? data.totalAmount)).toFixed(2)}</td>
                         </tr>
                         )}
                     </tbody>

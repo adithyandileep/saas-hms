@@ -5,13 +5,29 @@ export class VisitController {
 
   // POST /visits – create or get existing visit for an appointment (idempotent)
   create = async (req: Request, res: Response): Promise<void> => {
-    const { appointmentId, patientId, doctorId } = req.body;
+    const { appointmentId } = req.body;
     try {
+      // Return existing visit immediately (idempotent)
       const existing = await prisma.visit.findUnique({ where: { appointmentId } });
       if (existing) { res.status(200).json({ data: existing }); return; }
 
+      // Derive patientId and doctorId from the appointment — don't trust client-sent values
+      const appointment = await prisma.appointment.findUnique({
+        where: { id: appointmentId },
+        select: { patientId: true, doctorId: true },
+      });
+      if (!appointment) {
+        res.status(404).json({ message: 'Appointment not found' });
+        return;
+      }
+
       const visit = await prisma.visit.create({
-        data: { appointmentId, patientId, doctorId, status: 'in_progress' },
+        data: {
+          appointmentId,
+          patientId: appointment.patientId,
+          doctorId: appointment.doctorId,
+          status: 'in_progress',
+        },
       });
 
       await prisma.appointment.update({
