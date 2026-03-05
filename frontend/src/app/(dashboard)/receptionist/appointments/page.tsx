@@ -121,7 +121,7 @@ function ReceptionistAppointmentsContent() {
       await api.post("/bookings/book", { patientId: selectedPatient.id, doctorId: selectedDoctorId, slotId: selectedSlot.id, paymentMode: bookPaymentMode });
       setBookingModal(false); setSelectedSlot(null); setSelectedPatient(null);
       await loadSlots(); // Refresh slots
-      router.push(`/admin/patients/${selectedPatient.id}`); // Use admin patient detail since no receptionist [id] page
+      router.push(`/receptionist/patients/${selectedPatient.id}`); // Go to receptionist patient detail
     } catch (err: any) { setMessage(`❌ ${err.response?.data?.message || "Booking failed"}`); }
     finally { setBookSubmitting(false); }
   }

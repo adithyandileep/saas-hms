@@ -7,6 +7,7 @@ import {
   Loader2, Edit2, Save, X, ArrowLeft, Printer, CreditCard,
   User, Calendar, Receipt, Activity, CheckCircle2, Clock
 } from "lucide-react";
+import PaymentModal from "@/components/PaymentModal";
 
 interface Appointment {
   id: string; token: string; startTime: string; endTime: string;
@@ -67,82 +68,164 @@ function Field({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
+
+
+// ─── Billing Tab ───────────────────────────────────────────────────────────────
 function BillingTab({ patient, appointments, onRefresh }: { patient: Patient; appointments: Appointment[]; onRefresh: () => void }) {
-  const [payModal, setPayModal] = useState<Appointment | null>(null);
-  const [payAmount, setPayAmount] = useState("");
-  const [paying, setPaying] = useState(false);
-  const billable = appointments.filter(a => a.status !== "CANCELLED");
+  const [payingAppointment, setPayingAppointment] = useState<Appointment | null>(null);
+  const [regPaying, setRegPaying] = useState(false);
+  const [regMode, setRegMode] = useState("CASH");
+  const [regModal, setRegModal] = useState(false);
+  const [regErr, setRegErr] = useState("");
 
-  async function handlePay() {
-    if (!payModal) return;
-    setPaying(true);
+  const totalFee = appointments.reduce((s, a) => s + a.totalAmount, 0);
+  const totalPaid = appointments.reduce((s, a) => s + (a.paidAmount ?? 0), 0) + (patient.registrationPaymentStatus === "PAID" ? (patient.registrationAmount ?? 0) : 0);
+  const regPending = patient.registrationPaymentStatus !== "PAID" ? (patient.registrationAmount ?? 0) : 0;
+  const apptPending = appointments.reduce((s, a) => s + (a.pendingAmount ?? Math.max(0, a.totalAmount - (a.paidAmount ?? 0))), 0);
+  const grandTotal = (patient.registrationAmount ?? 0) + totalFee;
+  const grandPending = regPending + apptPending;
+
+  async function payReg() {
+    setRegPaying(true); setRegErr("");
     try {
-      await api.patch(`/bookings/appointments/${payModal.id}/payment`, { amount: Number(payAmount), paymentMethod: "CASH" });
-      setPayModal(null); onRefresh();
-    } catch (err: unknown) { alert((err as { response?: { data?: { message?: string } } }).response?.data?.message || "Payment failed"); }
-    finally { setPaying(false); }
+      await api.put(`/patients/${patient.id}/pay`, { paymentMode: regMode });
+      setRegModal(false); onRefresh();
+    } catch (e: any) { setRegErr(e.response?.data?.message || "Failed"); }
+    finally { setRegPaying(false); }
   }
-
-  function printReceipt(a: Appointment) {
-    const win = window.open("", "_blank");
-    if (!win) return;
-    win.document.write(`<html><head><title>Receipt - ${a.token}</title>
-    <style>body{font-family:Arial,sans-serif;padding:24px;max-width:400px;margin:auto}h2{margin:0 0 4px}hr{margin:12px 0}table{width:100%;border-collapse:collapse}td{padding:4px 0}@media print{button{display:none}}</style></head>
-    <body><h2>${patient.name}</h2><p style="color:#666;font-size:13px">${patient.uhid}</p><hr/>
-    <table><tr><td>Token</td><td style="text-align:right"><b>${a.token}</b></td></tr>
-    <tr><td>Date</td><td style="text-align:right">${new Date(a.startTime).toLocaleDateString("en-IN")}</td></tr>
-    <tr><td>Doctor</td><td style="text-align:right">Dr. ${a.doctor?.name}</td></tr>
-    <tr><td>Total</td><td style="text-align:right">₹${a.totalAmount}</td></tr>
-    <tr><td>Paid</td><td style="text-align:right">₹${a.paidAmount}</td></tr>
-    <tr><td>Pending</td><td style="text-align:right">₹${a.pendingAmount}</td></tr></table>
-    <hr/><button onclick="window.print()">Print</button></body></html>`);
-    win.document.close();
-  }
-
-  if (billable.length === 0) return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-10 text-center">
-      <Receipt size={40} className="text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-      <p className="font-semibold text-slate-700 dark:text-slate-300">No bills yet.</p>
-    </div>
-  );
 
   return (
-    <div className="space-y-3">
-      {billable.map(a => (
-        <div key={a.id} className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="font-semibold text-slate-900 dark:text-white">Dr. {a.doctor?.name}</p>
-              <p className="text-sm text-slate-500">{new Date(a.startTime).toLocaleDateString("en-IN")} · Token #{a.token}</p>
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: "Grand Total", value: `₹${grandTotal}`, color: "text-slate-900 dark:text-white" },
+          { label: "Total Paid", value: `₹${totalPaid}`, color: "text-emerald-600" },
+          { label: "Pending", value: `₹${grandPending}`, color: grandPending > 0 ? "text-red-500" : "text-emerald-600" },
+          { label: "Appointments", value: String(appointments.length), color: "text-blue-600" },
+        ].map(({ label, value, color }) => (
+          <div key={label} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
+            <p className="text-xs text-slate-500 font-medium mb-1">{label}</p>
+            <p className={`text-xl font-bold ${color}`}>{value}</p>
+          </div>
+        ))}
+      </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `@media print { body * { visibility: hidden; } #bill-print, #bill-print * { visibility: visible; } #bill-print { position: absolute; left: 0; top: 0; width: 100%; } .no-print { display: none !important; } }` }} />
+
+      <div id="bill-print" className="space-y-4">
+        {(patient.registrationAmount ?? 0) > 0 && (
+          <div className={`bg-white dark:bg-slate-900 rounded-2xl border-2 ${patient.registrationPaymentStatus === "PAID" ? "border-emerald-200 dark:border-emerald-800" : "border-orange-200 dark:border-orange-800"} p-5`}>
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Registration</span>
+                  {patient.registrationPaymentStatus === "PAID"
+                    ? <span className="flex items-center gap-1 text-xs text-emerald-600 font-semibold"><CheckCircle2 size={12} /> Paid</span>
+                    : <span className="flex items-center gap-1 text-xs text-orange-600 font-semibold"><Clock size={12} /> Pending</span>
+                  }
+                </div>
+                <p className="font-semibold text-slate-900 dark:text-white">Registration Fee</p>
+                <p className="text-sm text-slate-500 mt-0.5">UHID: {patient.uhid}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xl font-bold text-slate-900 dark:text-white">₹{patient.registrationAmount}</p>
+                {patient.registrationPaymentStatus !== "PAID" && (
+                  <button onClick={() => setRegModal(true)}
+                    className="no-print mt-2 px-3 py-1.5 bg-orange-600 text-white rounded-lg text-xs font-semibold hover:bg-orange-700 transition">
+                    Pay Now
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => printReceipt(a)} className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 dark:border-slate-700 rounded-xl text-xs hover:bg-slate-50 dark:hover:bg-slate-800 transition">
-                <Printer size={13} /> Receipt
+          </div>
+        )}
+
+        {appointments.length === 0 && (
+          <div className="text-center py-10 text-slate-500">No appointments found for this patient.</div>
+        )}
+        {appointments.map(apt => {
+          const isPaid = apt.paymentStatus === "PAID";
+          const pending = apt.pendingAmount ?? Math.max(0, apt.totalAmount - (apt.paidAmount ?? 0));
+          return (
+            <div key={apt.id} className={`bg-white dark:bg-slate-900 rounded-2xl border-2 ${isPaid ? "border-emerald-200 dark:border-emerald-800" : "border-orange-200 dark:border-orange-800"} p-5`}>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Consultation</span>
+                    <StatusBadge status={apt.status} />
+                    <PayBadge status={apt.paymentStatus} />
+                  </div>
+                  <p className="font-semibold text-slate-900 dark:text-white text-base">Dr. {apt.doctor?.name}</p>
+                  <p className="text-sm text-slate-500">{deptStr(apt.doctor?.department)}</p>
+                  <div className="flex items-center gap-4 mt-2 text-sm text-slate-400">
+                    <span className="flex items-center gap-1"><Calendar size={13} />{new Date(apt.startTime).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                    <span className="flex items-center gap-1 font-mono">Token: {apt.token}</span>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-xs text-slate-400 mb-1">Consult Fee</p>
+                  <p className="text-xl font-bold text-slate-900 dark:text-white">₹{apt.totalAmount}</p>
+                  {(apt.paidAmount ?? 0) > 0 && (
+                    <p className="text-xs text-emerald-600 font-medium mt-0.5">Paid: ₹{apt.paidAmount}</p>
+                  )}
+                  {!isPaid && pending > 0 && (
+                    <>
+                      <p className="text-xs text-red-500 font-medium mt-0.5">Due: ₹{pending}</p>
+                      <button onClick={() => setPayingAppointment(apt)}
+                        className="no-print mt-2 px-4 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition flex items-center gap-1.5 justify-end">
+                        <CreditCard size={12} /> Pay Now
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {appointments.length > 0 && (
+        <button onClick={() => window.print()} className="no-print flex items-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+          <Printer size={15} /> Print Bill
+        </button>
+      )}
+
+      {payingAppointment && (
+        <PaymentModal appointment={payingAppointment}
+          onClose={() => setPayingAppointment(null)}
+          onSuccess={() => { setPayingAppointment(null); onRefresh(); }} />
+      )}
+
+      {regModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+              <h3 className="font-bold text-slate-900 dark:text-white">Pay Registration Fee</h3>
+              <button onClick={() => setRegModal(false)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"><X size={16} /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-800 rounded-xl p-4">
+                <span className="text-slate-600 dark:text-slate-400">Registration Fee</span>
+                <span className="text-xl font-bold text-slate-900 dark:text-white">₹{patient.registrationAmount}</span>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Payment Method</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[["CASH", "Cash"], ["UPI", "UPI"], ["CREDIT", "Card"]].map(([val, label]) => (
+                    <button key={val} onClick={() => setRegMode(val)}
+                      className={`py-2 rounded-xl text-sm font-medium border-2 transition ${regMode === val ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400"}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {regErr && <p className="text-sm text-red-600">{regErr}</p>}
+            </div>
+            <div className="p-5 border-t border-slate-200 dark:border-slate-800 flex gap-3">
+              <button onClick={() => setRegModal(false)} className="flex-1 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition">Cancel</button>
+              <button onClick={payReg} disabled={regPaying} className="flex-1 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 transition flex items-center justify-center gap-2">
+                {regPaying ? <Loader2 className="animate-spin" size={15} /> : null} Pay ₹{patient.registrationAmount}
               </button>
-              {a.paymentStatus !== "PAID" && (
-                <button onClick={() => { setPayModal(a); setPayAmount(String(a.pendingAmount)); }} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs hover:bg-emerald-700 transition">
-                  <CreditCard size={13} /> Collect
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3">
-            <div className="text-center"><p className="text-xs text-slate-500 mb-0.5">Total</p><p className="font-bold text-slate-900 dark:text-white">₹{a.totalAmount}</p></div>
-            <div className="text-center"><p className="text-xs text-slate-500 mb-0.5">Paid</p><p className="font-bold text-emerald-600">₹{a.paidAmount}</p></div>
-            <div className="text-center"><p className="text-xs text-slate-500 mb-0.5">Pending</p><p className={`font-bold ${a.pendingAmount > 0 ? "text-amber-600" : "text-emerald-600"}`}>₹{a.pendingAmount}</p></div>
-          </div>
-          <div className="flex items-center gap-2 mt-3"><StatusBadge status={a.status} /><PayBadge status={a.paymentStatus} /></div>
-        </div>
-      ))}
-      {payModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
-            <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-1">Collect Payment</h3>
-            <p className="text-sm text-slate-500 mb-4">Token #{payModal.token} · Pending ₹{payModal.pendingAmount}</p>
-            <input type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder="Amount to collect" className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 mb-4 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
-            <div className="flex gap-3 justify-end">
-              <button onClick={() => setPayModal(null)} className="px-4 py-2 border border-slate-300 rounded-xl text-sm">Cancel</button>
-              <button onClick={handlePay} disabled={paying || !payAmount} className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50">{paying ? "Processing..." : "Confirm"}</button>
             </div>
           </div>
         </div>

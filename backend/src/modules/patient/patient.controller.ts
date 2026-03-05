@@ -98,16 +98,7 @@ export class PatientController {
 
       const amount = patient.registrationAmount || 0;
 
-      // Create a payment record for registration
-      await prisma.payment.create({
-        data: {
-          patientId: id,
-          amount,
-          paymentMode: modeToUse,
-          status: PaymentStatus.PAID,
-          transactionId: `REG-${Date.now()}`
-        }
-      });
+      // Registration payment is tracked directly on the Patient model, not the Payment table (which is for appointments)
 
       const updated = await prisma.patient.update({
         where: { id },

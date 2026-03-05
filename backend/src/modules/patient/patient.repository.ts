@@ -29,8 +29,13 @@ export class PatientRepository {
   }
 
   async getPatientById(id: string) {
-    return prisma.patient.findUnique({
-      where: { id },
+    return prisma.patient.findFirst({
+      where: {
+        OR: [
+          { id },
+          { uhid: id }
+        ]
+      },
       include: {
         appointments: {
           include: { doctor: true, slot: true },
