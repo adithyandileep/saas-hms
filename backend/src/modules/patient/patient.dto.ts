@@ -42,3 +42,13 @@ age: z.number().int().nonnegative('Age cannot be negative'),  dob: z.string().op
   registrationAmount: z.number().optional().default(200),
   registrationDate: z.string().optional(), // ISO date
 });
+
+export const UpsertPatientMedicalHistoryDto = z.object({
+  pastMedicalHistory: z.string().optional(),
+  pastSurgicalHistory: z.string().optional(),
+  allergies: z.string().optional(),
+  familyHistory: z.string().optional(),
+  socialHistory: z.string().optional(),
+  medications: z.string().optional(),
+  vaccinationHistory: z.string().optional(),
+});

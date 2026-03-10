@@ -2,6 +2,7 @@ import { BookingRepository } from './booking.repository';
 import { CreateSlotDto, BookAppointmentDto } from './booking.dto';
 import { z } from 'zod';
 import { prisma } from '../../config/prisma';
+import { Prisma } from '@prisma/client';
 
 export class BookingService {
   private repository = new BookingRepository();
@@ -68,14 +69,10 @@ export class BookingService {
 
         if (currentSlotEnd <= currentDayEnd) {
           if (currentSlotStart < now) {
-            // Gracefully skip past slots instead of crashing bulk generation
-            currentSlotStart = new Date(currentSlotEnd.getTime() + data.breakDurationMinutes * 60000);
-            continue;
+            throw new Error("Selected time is not valid or past.");
           }
           if (isOverlapping(currentSlotStart, currentSlotEnd)) {
-            // Gracefully skip overlaps as well so bulk generation is idempotent
-            currentSlotStart = new Date(currentSlotEnd.getTime() + data.breakDurationMinutes * 60000);
-            continue;
+            throw new Error("One or more generated slots overlap with existing appointments for this doctor.");
           }
 
           slots.push({
@@ -183,5 +180,56 @@ export class BookingService {
     );
 
     return appointment;
+  }
+
+  async getAppointmentsForUser(userId: string, role: string, patientId?: string) {
+    if (role === 'DOCTOR') {
+      const profile = await this.repository.findDoctorProfileByUserId(userId);
+      if (!profile) {
+        throw new Error('Doctor profile not found');
+      }
+      return this.repository.getAppointmentsForDoctor(profile.id, patientId);
+    }
+
+    return this.repository.getAppointmentsForAdminOrReception(patientId);
+  }
+
+  async acknowledgeAppointment(id: string) {
+    return this.repository.acknowledgeAppointment(id);
+  }
+
+  async getAppointmentById(id: string) {
+    return this.repository.getAppointmentById(id);
+  }
+
+  async getVisit(appointmentId: string) {
+    return this.repository.getVisitByAppointmentId(appointmentId);
+  }
+
+  async upsertVisit(
+    appointmentId: string,
+    data: {
+      chiefComplaint?: string;
+      examination?: string;
+      diagnosis?: string;
+      diagnosisIcd10?: string;
+      treatmentPlan?: string;
+      consultationNotes?: string;
+      notes?: string;
+      medications?: Prisma.InputJsonValue;
+      labRequests?: Prisma.InputJsonValue;
+      radiologyRequests?: Prisma.InputJsonValue;
+      vitals?: Prisma.InputJsonValue;
+    }
+  ) {
+    return this.repository.upsertVisitByAppointmentId(appointmentId, data);
+  }
+
+  async completeAppointment(id: string) {
+    return this.repository.completeAppointment(id);
+  }
+
+  async getActiveMedicines() {
+    return this.repository.getActiveMedicines();
   }
 }

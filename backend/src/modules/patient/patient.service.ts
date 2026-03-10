@@ -1,5 +1,5 @@
 import { PatientRepository } from './patient.repository';
-import { RegisterPatientDto } from './patient.dto';
+import { RegisterPatientDto, UpsertPatientMedicalHistoryDto } from './patient.dto';
 import { z } from 'zod';
 
 export class PatientService {
@@ -67,5 +67,13 @@ export class PatientService {
 
   async deletePatient(id: string) {
     return this.repository.deletePatient(id);
+  }
+
+  async getPatientMedicalHistory(patientId: string) {
+    return this.repository.getPatientMedicalHistory(patientId);
+  }
+
+  async upsertPatientMedicalHistory(id: string, data: z.infer<typeof UpsertPatientMedicalHistoryDto>) {
+    return this.repository.upsertPatientMedicalHistory(id, data);
   }
 }

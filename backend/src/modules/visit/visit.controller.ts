@@ -2,22 +2,32 @@ import { Request, Response } from 'express';
 import { prisma } from '../../config/prisma';
 
 export class VisitController {
+  private isSameDay = (dateA: Date, dateB: Date): boolean =>
+    dateA.getFullYear() === dateB.getFullYear()
+    && dateA.getMonth() === dateB.getMonth()
+    && dateA.getDate() === dateB.getDate();
 
-  // POST /visits – create or get existing visit for an appointment (idempotent)
+  // POST /visits - create or get existing visit for an appointment (idempotent)
   create = async (req: Request, res: Response): Promise<void> => {
     const { appointmentId } = req.body;
     try {
-      // Return existing visit immediately (idempotent)
       const existing = await prisma.visit.findUnique({ where: { appointmentId } });
-      if (existing) { res.status(200).json({ data: existing }); return; }
+      if (existing) {
+        res.status(200).json({ data: existing });
+        return;
+      }
 
-      // Derive patientId and doctorId from the appointment — don't trust client-sent values
       const appointment = await prisma.appointment.findUnique({
         where: { id: appointmentId },
-        select: { patientId: true, doctorId: true },
+        select: { patientId: true, doctorId: true, startTime: true },
       });
       if (!appointment) {
         res.status(404).json({ message: 'Appointment not found' });
+        return;
+      }
+
+      if (req.user?.role === 'DOCTOR' && !this.isSameDay(new Date(appointment.startTime), new Date())) {
+        res.status(400).json({ message: 'Doctors can acknowledge only on the appointment day' });
         return;
       }
 
@@ -56,18 +66,45 @@ export class VisitController {
           },
         },
       });
-      if (!visit) { res.status(404).json({ message: 'Visit not found' }); return; }
+      if (!visit) {
+        res.status(404).json({ message: 'Visit not found' });
+        return;
+      }
       res.status(200).json({ data: visit });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
   };
 
-  // PUT /visits/:id – save clinical notes
+  // PUT /visits/:id - save clinical notes
   update = async (req: Request, res: Response): Promise<void> => {
     const { chiefComplaint, diagnosis, medications, notes, status } = req.body;
     const visitId = String(req.params.id);
     try {
+      const existing = await prisma.visit.findUnique({
+        where: { id: visitId },
+        include: {
+          appointment: {
+            select: {
+              startTime: true,
+            },
+          },
+        },
+      });
+
+      if (!existing) {
+        res.status(404).json({ message: 'Visit not found' });
+        return;
+      }
+
+      if (
+        req.user?.role === 'DOCTOR'
+        && !this.isSameDay(new Date(existing.appointment.startTime), new Date())
+      ) {
+        res.status(400).json({ message: 'Doctors can edit consultation only on the appointment day' });
+        return;
+      }
+
       const updated = await prisma.visit.update({
         where: { id: visitId },
         data: {

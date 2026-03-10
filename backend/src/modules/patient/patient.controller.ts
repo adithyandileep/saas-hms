@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { PatientService } from './patient.service';
-import { RegisterPatientDto } from './patient.dto';
+import { RegisterPatientDto, UpsertPatientMedicalHistoryDto } from './patient.dto';
 import { prisma } from '../../config/prisma';
 import { PaymentStatus, PaymentMode } from '@prisma/client';
 
@@ -108,6 +108,27 @@ export class PatientController {
       res.status(200).json({ message: 'Registration paid successfully', data: updated });
     } catch (error: any) {
       res.status(400).json({ message: error.message || 'Payment failed' });
+    }
+  };
+
+  getMedicalHistory = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+      const data = await this.service.getPatientMedicalHistory(id);
+      res.status(200).json({ data: data || null });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || 'Failed to fetch medical history' });
+    }
+  };
+
+  upsertMedicalHistory = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+      const payload = UpsertPatientMedicalHistoryDto.parse(req.body);
+      const data = await this.service.upsertPatientMedicalHistory(id, payload);
+      res.status(200).json({ message: 'Medical history updated', data });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || 'Failed to update medical history' });
     }
   };
 }

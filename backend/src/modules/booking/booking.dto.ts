@@ -31,9 +31,46 @@ export const BookAppointmentDto = z.object({
 
 export const UpdateVisitDto = z.object({
   chiefComplaint: z.string().optional(),
+  examination: z.string().optional(),
   diagnosis: z.string().optional(),
+  diagnosisIcd10: z.string().optional(),
+  treatmentPlan: z.string().optional(),
+  consultationNotes: z.string().optional(),
   notes: z.string().optional(),
-  medications: z.any().optional(), // Could be more strictly typed based on JSON structure
+  medications: z.array(z.object({
+    medicineId: z.string().uuid(),
+    brand: z.string().min(1),
+    drug: z.string().min(1),
+    strength: z.string().min(1),
+    dosageForm: z.string().min(1),
+    dose: z.string().min(1),
+    unit: z.string().min(1),
+    frequency: z.string().min(1),
+    duration: z.string().min(1),
+    durationUnit: z.string().min(1),
+    instructions: z.string().min(1),
+    notes: z.string().optional(),
+  })).optional(),
+  labRequests: z.array(z.object({
+    testName: z.string().min(1),
+    clinicalNotes: z.string().optional(),
+    status: z.string().default('REQUESTED'),
+  })).optional(),
+  radiologyRequests: z.array(z.object({
+    modality: z.enum(['X_RAY', 'MRI', 'CT_SCAN', 'ULTRASOUND']),
+    testName: z.string().min(1),
+    clinicalNotes: z.string().optional(),
+    status: z.string().default('REQUESTED'),
+  })).optional(),
+  vitals: z.object({
+    temperature: z.string().optional(),
+    pulse: z.string().optional(),
+    spo2: z.string().optional(),
+    bpSystolic: z.string().optional(),
+    bpDiastolic: z.string().optional(),
+    respiratoryRate: z.string().optional(),
+    nurseNotes: z.string().optional(),
+  }).optional(),
 });
 
 export const CompleteAppointmentDto = z.object({

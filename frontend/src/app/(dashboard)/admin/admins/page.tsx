@@ -27,6 +27,10 @@ const MODULES = [
   { id: "departments", label: "Departments Management" },
   { id: "receptionists", label: "Receptionists Management" },
   { id: "patients", label: "Patients Management" },
+  { id: "appointments", label: "Appointments" },
+  { id: "billing", label: "Billing" },
+  { id: "prescriptions", label: "Prescriptions" },
+  { id: "medicines", label: "Medicines" },
   { id: "settings", label: "Settings" },
 ];
 

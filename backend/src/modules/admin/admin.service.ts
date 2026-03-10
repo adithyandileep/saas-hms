@@ -1,5 +1,5 @@
 import { AdminRepository } from './admin.repository';
-import { CreateAdminDto, UpdateAdminDto } from './admin.dto';
+import { CreateAdminDto, UpdateAdminDto, CreateMedicineDto, UpdateMedicineDto } from './admin.dto';
 import { z } from 'zod';
 import { hashPassword } from '../../utils/hash';
 import { Role } from '@prisma/client';
@@ -47,5 +47,21 @@ export class AdminService {
 
   async getDashboardStats() {
     return this.repository.getDashboardStats();
+  }
+
+  async getMedicines(includeInactive = false) {
+    return this.repository.getMedicines(includeInactive);
+  }
+
+  async createMedicine(data: z.infer<typeof CreateMedicineDto>) {
+    return this.repository.createMedicine(data);
+  }
+
+  async updateMedicine(id: string, data: z.infer<typeof UpdateMedicineDto>) {
+    return this.repository.updateMedicine(id, data);
+  }
+
+  async deactivateMedicine(id: string) {
+    return this.repository.updateMedicine(id, { isActive: false });
   }
 }

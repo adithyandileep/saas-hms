@@ -151,4 +151,32 @@ export class AdminRepository {
       ]
     };
   }
+
+  async getMedicines(includeInactive = false) {
+    return prisma.medicine.findMany({
+      where: includeInactive ? {} : { isActive: true },
+      orderBy: [{ medicineName: 'asc' }, { createdAt: 'desc' }],
+    });
+  }
+
+  async createMedicine(data: {
+    medicineName: string;
+    brand: string;
+  }) {
+    return prisma.medicine.create({ data: data as any });
+  }
+
+  async updateMedicine(
+    id: string,
+    data: {
+      medicineName?: string;
+      brand?: string;
+      isActive?: boolean;
+    }
+  ) {
+    return prisma.medicine.update({
+      where: { id },
+      data: data as any,
+    });
+  }
 }

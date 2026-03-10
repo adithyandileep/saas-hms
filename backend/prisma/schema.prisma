@@ -142,6 +142,7 @@ model Patient {
   medicalReports          MedicalReport[]
   invoices                Invoice[]
   visits                  Visit[]
+  medicalHistory          PatientMedicalHistory?
 }
 
 model Visit {
@@ -151,8 +152,15 @@ model Visit {
   doctorId      String
 
   chiefComplaint  String?  @db.Text
+  examination     String?  @db.Text
   diagnosis       String?  @db.Text
+  diagnosisIcd10  String?  @db.Text
+  treatmentPlan   String?  @db.Text
   medications     Json?
+  labRequests     Json?
+  radiologyRequests Json?
+  vitals          Json?
+  consultationNotes String? @db.Text
   notes           String?  @db.Text
   status          String   @default("in_progress") // in_progress | completed
 
@@ -162,6 +170,31 @@ model Visit {
   appointment   Appointment   @relation(fields: [appointmentId], references: [id])
   patient       Patient       @relation(fields: [patientId], references: [id])
   doctor        DoctorProfile @relation(fields: [doctorId], references: [id])
+}
+
+model PatientMedicalHistory {
+  id                    String   @id @default(uuid())
+  patientId             String   @unique
+  pastMedicalHistory    String?  @db.Text
+  pastSurgicalHistory   String?  @db.Text
+  allergies             String?  @db.Text
+  familyHistory         String?  @db.Text
+  socialHistory         String?  @db.Text
+  medications           String?  @db.Text
+  vaccinationHistory    String?  @db.Text
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  patient               Patient  @relation(fields: [patientId], references: [id])
+}
+
+model Medicine {
+  id          String   @id @default(uuid())
+  medicineName String
+  brand       String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Slot {

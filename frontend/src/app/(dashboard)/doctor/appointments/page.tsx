@@ -33,9 +33,7 @@ export default function DoctorAppointmentsPage() {
   async function handleAcknowledge(appt: Appointment) {
     setAcknowledging(appt.id);
     try {
-      // Create (or get existing) visit
-      await api.post("/visits", { appointmentId: appt.id });
-      // Navigate to the consultation page using appointment ID (same as doctor dashboard)
+      await api.patch(`/bookings/appointments/${appt.id}/acknowledge`);
       router.push(`/doctor/consultation/${appt.id}`);
     } catch (err: any) {
       alert(err.response?.data?.message || "Failed to acknowledge");
@@ -57,12 +55,13 @@ export default function DoctorAppointmentsPage() {
   });
 
   function AppointmentCard({ a }: { a: Appointment }) {
-    const isNew = !a.visit;
-    const isInProgress = a.visit && a.visit.status === "in_progress";
-    const isCompleted = a.visit && a.visit.status === "completed";
+    const isNew = a.status === "BOOKED";
+    const isInProgress = a.status === "CHECKED_IN" || (!!a.visit && a.visit.status === "in_progress");
+    const isCompleted = a.status === "COMPLETED" || (!!a.visit && a.visit.status === "completed");
 
     const d = new Date(a.startTime);
     const isPast = d < new Date() && d.toDateString() !== new Date().toDateString();
+    const canAcknowledgeToday = d.toDateString() === new Date().toDateString();
 
     return (
       <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition">
@@ -99,11 +98,11 @@ export default function DoctorAppointmentsPage() {
               {isNew && (
                 <button
                   onClick={() => handleAcknowledge(a)}
-                  disabled={acknowledging === a.id}
+                  disabled={acknowledging === a.id || !canAcknowledgeToday}
                   className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 transition flex items-center gap-2"
                 >
                   {acknowledging === a.id ? <Loader2 className="animate-spin" size={15} /> : null}
-                  Acknowledge
+                  {canAcknowledgeToday ? "Acknowledge" : "Acknowledge (Only Today)"}
                 </button>
               )}
               {isInProgress && (
@@ -135,7 +134,7 @@ export default function DoctorAppointmentsPage() {
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
           <Stethoscope className="text-blue-500" /> My Appointments
         </h1>
-        <button onClick={loadAppointments} className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+        <button onClick={loadAppointments} className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
           Refresh
         </button>
       </div>

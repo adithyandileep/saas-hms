@@ -8,8 +8,8 @@ const controller = new SettingsController();
 
 router.use(authenticate);
 
-// Allow SUPERADMIN and ADMIN to manage organization settings
-router.get('/organization', requireRoles([Role.SUPERADMIN, Role.ADMIN]), controller.getOrganization);
+// Allow all staff roles to read organization settings for document headers
+router.get('/organization', requireRoles([Role.SUPERADMIN, Role.ADMIN, Role.DOCTOR, Role.RECEPTIONIST]), controller.getOrganization);
 router.put('/organization', requireRoles([Role.SUPERADMIN, Role.ADMIN]), controller.updateOrganization);
 
 export default router;

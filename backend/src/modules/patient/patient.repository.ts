@@ -43,6 +43,7 @@ export class PatientRepository {
         },
         prescriptions: true,
         medicalReports: true,
+        medicalHistory: true,
       },
     });
   }
@@ -77,5 +78,33 @@ export class PatientRepository {
       data: { status: 'CANCELLED' },
     });
     return prisma.patient.delete({ where: { id } });
+  }
+
+  async getPatientMedicalHistory(patientId: string) {
+    return prisma.patientMedicalHistory.findUnique({
+      where: { patientId },
+    });
+  }
+
+  async upsertPatientMedicalHistory(
+    patientId: string,
+    data: {
+      pastMedicalHistory?: string;
+      pastSurgicalHistory?: string;
+      allergies?: string;
+      familyHistory?: string;
+      socialHistory?: string;
+      medications?: string;
+      vaccinationHistory?: string;
+    }
+  ) {
+    return prisma.patientMedicalHistory.upsert({
+      where: { patientId },
+      update: data,
+      create: {
+        patientId,
+        ...data,
+      },
+    });
   }
 }

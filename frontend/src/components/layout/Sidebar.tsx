@@ -3,7 +3,7 @@
 import { useAuthStore } from "@/store/authStore";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Calendar, FileText, Home, Settings, Users, CreditCard, Building2 } from "lucide-react";
+import { Activity, Calendar, FileText, Home, Settings, Users, CreditCard, Building2, Pill } from "lucide-react";
 
 type NavItem = {
   name: string;
@@ -31,6 +31,7 @@ export function Sidebar() {
       { id: "appointments", name: "Appointments", href: "/admin/appointments", icon: Calendar },
       { id: "billing", name: "Billing", href: "/admin/billing", icon: CreditCard },
       { id: "prescriptions", name: "Prescriptions", href: "/admin/prescriptions", icon: FileText },
+      { id: "medicines", name: "Medicines", href: "/admin/medicines", icon: Pill },
       { id: "settings", name: "Settings", href: "/settings", icon: Settings },
     ];
 

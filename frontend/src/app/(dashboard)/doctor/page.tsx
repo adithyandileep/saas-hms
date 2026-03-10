@@ -4,7 +4,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { Calendar, CheckCircle, Clock, Users, Activity, Loader2 } from "lucide-react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { format, isToday } from "date-fns";
 
 interface Appointment {
@@ -19,8 +19,10 @@ interface Appointment {
 
 export default function DoctorDashboard() {
   const user = useAuthStore((state) => state.user);
+  const router = useRouter();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actingId, setActingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAppointments();
@@ -40,6 +42,20 @@ export default function DoctorDashboard() {
   const todayAppts = appointments.filter(a => isToday(new Date(a.startTime)));
   const pendingCount = todayAppts.filter(a => a.status === 'BOOKED' || a.status === 'CHECKED_IN').length;
   const completedCount = todayAppts.filter(a => a.status === 'COMPLETED').length;
+
+  const handleOpenConsult = async (appt: Appointment) => {
+    try {
+      setActingId(appt.id);
+      if (appt.status === "BOOKED") {
+        await api.patch(`/bookings/appointments/${appt.id}/acknowledge`);
+      }
+      router.push(`/doctor/consultation/${appt.id}`);
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Failed to open consultation");
+    } finally {
+      setActingId(null);
+    }
+  };
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -116,16 +132,17 @@ export default function DoctorDashboard() {
                   </div>
                 </div>
                 <div className="shrink-0">
-                  <Link
-                    href={`/doctor/consultation/${appt.id}`}
+                  <button
+                    onClick={() => handleOpenConsult(appt)}
+                    disabled={actingId === appt.id}
                     className={`px-4 py-2 rounded-xl text-sm font-bold transition whitespace-nowrap ${
                       appt.status === 'COMPLETED'
                       ? 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
                       : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20'
                     }`}
                   >
-                    {appt.status === 'COMPLETED' ? 'View Details' : 'Start Consult'}
-                  </Link>
+                    {actingId === appt.id ? "Opening..." : appt.status === 'COMPLETED' ? 'View Details' : appt.status === 'BOOKED' ? 'Acknowledge & Start' : 'Start Consult'}
+                  </button>
                 </div>
               </div>
             ))}

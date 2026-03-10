@@ -8,7 +8,16 @@ import {
   CheckCircle2, Clock, ChevronDown, ChevronUp, Pill
 } from "lucide-react";
 
-interface Medication { name: string; dosage: string; frequency: string; duration: string; }
+interface Medication {
+  name?: string;
+  dosage?: string;
+  drug?: string;
+  dose?: string;
+  unit?: string;
+  frequency?: string;
+  duration?: string;
+  durationUnit?: string;
+}
 interface Visit {
   chiefComplaint?: string; diagnosis?: string;
   medications?: Medication[]; notes?: string;
@@ -108,10 +117,10 @@ function VisitCard({ a }: { a: Appointment }) {
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {a.visit.medications.map((m, i) => (
                           <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                            <td className="px-4 py-2.5 font-medium text-slate-900 dark:text-white">{m.name}</td>
-                            <td className="px-4 py-2.5 text-slate-600 dark:text-slate-400">{m.dosage}</td>
+                            <td className="px-4 py-2.5 font-medium text-slate-900 dark:text-white">{m.name || m.drug}</td>
+                            <td className="px-4 py-2.5 text-slate-600 dark:text-slate-400">{m.dosage || `${m.dose || ""} ${m.unit || ""}`.trim()}</td>
                             <td className="px-4 py-2.5 text-slate-600 dark:text-slate-400">{m.frequency}</td>
-                            <td className="px-4 py-2.5 text-slate-600 dark:text-slate-400">{m.duration}</td>
+                            <td className="px-4 py-2.5 text-slate-600 dark:text-slate-400">{`${m.duration || ""} ${m.durationUnit || ""}`.trim()}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -134,6 +143,7 @@ export default function DoctorPatientDetailPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"overview" | "history">("overview");
+  const [actingId, setActingId] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -149,8 +159,25 @@ export default function DoctorPatientDetailPage() {
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-blue-500" size={40} /></div>;
   if (!patient) return <div className="text-center py-20 text-slate-500">Patient not found</div>;
 
-  const completed = appointments.filter(a => a.status === "COMPLETED");
+  const historyVisits = appointments
+    .filter(a => !!a.visit)
+    .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
   const upcoming = appointments.filter(a => a.status === "BOOKED" || a.status === "CHECKED_IN");
+  const isSameDay = (dateStr: string) => new Date(dateStr).toDateString() === new Date().toDateString();
+
+  async function openConsult(a: Appointment) {
+    setActingId(a.id);
+    try {
+      if (a.status === "BOOKED") {
+        await api.patch(`/bookings/appointments/${a.id}/acknowledge`);
+      }
+      router.push(`/doctor/consultation/${a.id}`);
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Unable to open consultation");
+    } finally {
+      setActingId(null);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -177,7 +204,7 @@ export default function DoctorPatientDetailPage() {
           <p className="text-xs text-slate-500 mt-0.5">Total Visits</p>
         </div>
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 text-center shadow-sm">
-          <p className="text-2xl font-bold text-emerald-600">{completed.length}</p>
+          <p className="text-2xl font-bold text-emerald-600">{historyVisits.length}</p>
           <p className="text-xs text-slate-500 mt-0.5">Completed</p>
         </div>
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 text-center shadow-sm">
@@ -190,7 +217,7 @@ export default function DoctorPatientDetailPage() {
       <div className="flex gap-1 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-2xl">
         {[
           { key: "overview" as const, label: "Patient Info", icon: <User size={15} /> },
-          { key: "history" as const, label: `Medical History (${completed.length})`, icon: <Activity size={15} /> },
+          { key: "history" as const, label: `Medical History (${historyVisits.length})`, icon: <Activity size={15} /> },
         ].map(tab => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key)}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-medium transition ${activeTab === tab.key ? "bg-white dark:bg-slate-900 shadow-sm text-blue-600 dark:text-blue-400" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"}`}>
@@ -227,7 +254,18 @@ export default function DoctorPatientDetailPage() {
                     <p className="font-medium text-slate-900 dark:text-white">Dr. {a.doctor?.name}</p>
                     <p className="text-sm text-slate-500 mt-0.5">{new Date(a.startTime).toLocaleDateString("en-IN")} · {new Date(a.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
                   </div>
-                  <StatusBadge status={a.status} />
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={a.status} />
+                    {isSameDay(a.startTime) && (
+                      <button
+                        onClick={() => openConsult(a)}
+                        disabled={actingId === a.id}
+                        className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700"
+                      >
+                        {actingId === a.id ? "Opening..." : a.status === "BOOKED" ? "Acknowledge & Open" : "Open Consult"}
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -238,7 +276,7 @@ export default function DoctorPatientDetailPage() {
       {/* ── History Tab ── */}
       {activeTab === "history" && (
         <div className="space-y-4">
-          {completed.length === 0 ? (
+          {historyVisits.length === 0 ? (
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-10 text-center">
               <CheckCircle2 size={40} className="text-slate-300 dark:text-slate-600 mx-auto mb-3" />
               <h3 className="font-semibold text-slate-700 dark:text-slate-300 mb-1">No Past Visits</h3>
@@ -246,8 +284,8 @@ export default function DoctorPatientDetailPage() {
             </div>
           ) : (
             <>
-              <p className="text-sm text-slate-500">{completed.length} completed visit{completed.length !== 1 ? "s" : ""} — most recent first</p>
-              {completed.map(a => <VisitCard key={a.id} a={a} />)}
+              <p className="text-sm text-slate-500">{historyVisits.length} visit record{historyVisits.length !== 1 ? "s" : ""} — most recent first</p>
+              {historyVisits.map(a => <VisitCard key={a.id} a={a} />)}
             </>
           )}
         </div>

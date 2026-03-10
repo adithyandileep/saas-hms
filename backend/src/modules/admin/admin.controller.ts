@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { AdminService } from './admin.service';
-import { CreateAdminDto, UpdateAdminDto } from './admin.dto';
+import { CreateAdminDto, UpdateAdminDto, CreateMedicineDto, UpdateMedicineDto } from './admin.dto';
 
 export class AdminController {
   private service = new AdminService();
@@ -65,6 +65,47 @@ export class AdminController {
       res.status(200).json({ message: 'Admin deleted successfully' });
     } catch (err: any) {
       res.status(400).json({ message: err.message || 'Failed to delete admin' });
+    }
+  };
+
+  getMedicines = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const includeInactive = String(req.query.includeInactive || 'false') === 'true';
+      const data = await this.service.getMedicines(includeInactive);
+      res.status(200).json({ data });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to fetch medicines' });
+    }
+  };
+
+  createMedicine = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const payload = CreateMedicineDto.parse(req.body);
+      const data = await this.service.createMedicine(payload);
+      res.status(201).json({ message: 'Medicine created successfully', data });
+    } catch (err: any) {
+      res.status(400).json({ message: err.message || 'Failed to create medicine' });
+    }
+  };
+
+  updateMedicine = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+      const payload = UpdateMedicineDto.parse(req.body);
+      const data = await this.service.updateMedicine(id, payload);
+      res.status(200).json({ message: 'Medicine updated successfully', data });
+    } catch (err: any) {
+      res.status(400).json({ message: err.message || 'Failed to update medicine' });
+    }
+  };
+
+  deactivateMedicine = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+      const data = await this.service.deactivateMedicine(id);
+      res.status(200).json({ message: 'Medicine deactivated successfully', data });
+    } catch (err: any) {
+      res.status(400).json({ message: err.message || 'Failed to deactivate medicine' });
     }
   };
 }

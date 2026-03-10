@@ -14,3 +14,14 @@ export const UpdateAdminDto = z.object({
   permissions: z.array(z.string()).optional(),
   isActive: z.boolean().optional(),
 });
+
+export const CreateMedicineDto = z.object({
+  medicineName: z.string().min(1),
+  brand: z.string().min(1),
+});
+
+export const UpdateMedicineDto = z.object({
+  medicineName: z.string().min(1).optional(),
+  brand: z.string().min(1).optional(),
+  isActive: z.boolean().optional(),
+});

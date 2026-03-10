@@ -9,6 +9,7 @@ const controller = new BookingController();
 router.post('/slots', authenticate, requireRoles([Role.SUPERADMIN, Role.ADMIN, Role.RECEPTIONIST]), controller.createSlot);
 router.post('/slots/bulk', authenticate, requireRoles([Role.SUPERADMIN, Role.ADMIN, Role.RECEPTIONIST]), controller.createBulkSlots);
 router.get('/slots/:doctorId', authenticate, controller.getAvailableSlots);
+router.get('/medicines', authenticate, controller.getMedicines);
 router.post('/book', authenticate, requireRoles([Role.RECEPTIONIST, Role.PATIENT, Role.ADMIN, Role.SUPERADMIN]), controller.bookAppointment);
 router.get('/appointments', authenticate, controller.getAppointments);
 router.get('/appointments/:id', authenticate, controller.getAppointmentById);
