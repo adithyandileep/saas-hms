@@ -1,23 +1,22 @@
-import { prisma } from '../../config/prisma';
 import { CreateMedicalReportType } from './medical-report.dto';
+import { MedicalReportRepository } from './medical-report.repository';
 
 export class MedicalReportService {
+  private repository = new MedicalReportRepository();
+
   async createReport(data: CreateMedicalReportType) {
-    return prisma.medicalReport.create({ data });
+    return this.repository.createReport(data);
   }
 
   async getReportsByPatientId(patientId: string) {
-    return prisma.medicalReport.findMany({
-      where: { patientId },
-      orderBy: { uploadedDate: 'desc' }
-    });
+    return this.repository.getReportsByPatientId(patientId);
   }
 
   async getReportById(id: string) {
-    return prisma.medicalReport.findUnique({ where: { id } });
+    return this.repository.getReportById(id);
   }
 
   async deleteReport(id: string) {
-    return prisma.medicalReport.delete({ where: { id } });
+    return this.repository.deleteReport(id);
   }
 }

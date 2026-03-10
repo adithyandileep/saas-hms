@@ -37,6 +37,36 @@ enum PaymentMode {
   STRIPE
 }
 
+enum LabRequestStatus {
+  REQUESTED
+  SAMPLE_COLLECTED
+  REPORT_UPLOADED
+  COMPLETED
+}
+
+enum RadiologyRequestStatus {
+  REQUESTED
+  SCHEDULED
+  REPORT_UPLOADED
+  COMPLETED
+}
+
+enum BillingCategory {
+  CONSULTATION
+  REGISTRATION
+  LAB_TEST
+  RADIOLOGY_TEST
+  OTHER
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+}
+
 model User {
   id            String   @id @default(uuid())
   username      String   @unique
@@ -56,9 +86,8 @@ model AdminProfile {
   userId      String   @unique
   name        String
   phone       String?  @db.VarChar(15)
-  // Store enabled modules as array of strings, e.g., ["dashboard", "doctors", "patients"]
   permissions Json     @default("[]")
-  
+
   user        User     @relation(fields: [userId], references: [id])
 }
 
@@ -73,12 +102,17 @@ model DoctorProfile {
   renewalCharge         Float
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
-  
-  user                  User     @relation(fields: [userId], references: [id])
-  department            Department @relation(fields: [departmentId], references: [id])
-  slots                 Slot[]
-  appointments          Appointment[]
-  visits                Visit[]
+
+  user              User               @relation(fields: [userId], references: [id])
+  department        Department         @relation(fields: [departmentId], references: [id])
+  slots             Slot[]
+  appointments      Appointment[]
+  visits            Visit[]
+  labRequests       LabRequest[]
+  radiologyRequests RadiologyRequest[]
+
+  @@index([departmentId])
+  @@index([createdAt])
 }
 
 model ReceptionistProfile {
@@ -86,90 +120,106 @@ model ReceptionistProfile {
   userId    String   @unique
   name      String
   phone     String   @db.VarChar(15)
-  
+
   user      User     @relation(fields: [userId], references: [id])
 }
 
 model Patient {
-  id                      String   @id @default(uuid())
-  userId                  String?  @unique
-  uhid                    String   @unique
-  name                    String
-  firstName               String?
-  lastName                String?
-  age                     Int
-  dob                     DateTime?
-  gender                  String?
-  registrationDate        DateTime @default(now())
+  id                        String                @id @default(uuid())
+  userId                    String?               @unique
+  uhid                      String                @unique
+  name                      String
+  firstName                 String?
+  lastName                  String?
+  age                       Int
+  dob                       DateTime?
+  gender                    String?
+  registrationDate          DateTime              @default(now())
+  houseNumber               String?
+  houseName                 String?
+  houseAddress              String?
+  localArea                 String?
+  street                    String?
+  city                      String?
+  state                     String?
+  pincode                   String?
+  address                   String?               @db.Text
+  contactNo                 String?               @db.VarChar(15)
+  alternateContact          String?               @db.VarChar(15)
+  email                     String?
+  guardianName              String?
+  guardianRelation          String?
+  guardianContact           String?               @db.VarChar(15)
+  guardianComment           String?               @db.Text
+  guardianAddress           String?               @db.Text
+  referredDoctor            String?
+  referredHospital          String?
+  idProofType               String?
+  idProofDetail             String?
+  idProofData               String?               @db.Text
+  registrationAmount        Float?                @default(200)
+  registrationPaymentStatus PaymentStatus         @default(UNPAID)
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
 
-  // Structured address fields
-  houseNumber             String?
-  houseName               String?
-  houseAddress            String?
-  localArea               String?
-  street                  String?
-  city                    String?
-  state                   String?
-  pincode                 String?
+  appointments       Appointment[]
+  prescriptions      Prescription[]
+  medicalReports     MedicalReport[]
+  invoices           Invoice[]
+  visits             Visit[]
+  medicalHistory     PatientMedicalHistory?
+  labRequests        LabRequest[]
+  radiologyRequests  RadiologyRequest[]
 
-  // Legacy combined address for backward compat
-  address                 String?  @db.Text
-  contactNo               String?  @db.VarChar(15)
-  alternateContact        String?  @db.VarChar(15)
-  email                   String?
-
-  guardianName            String?
-  guardianRelation        String?
-  guardianContact         String?  @db.VarChar(15)
-  guardianComment         String?  @db.Text
-  guardianAddress         String?  @db.Text
-
-  referredDoctor          String?
-  referredHospital        String?
-
-  idProofType             String?
-  idProofDetail           String?
-  idProofData             String?  @db.Text
-
-  registrationAmount      Float?   @default(200)
-  registrationPaymentStatus PaymentStatus @default(UNPAID)
-
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-
-  appointments            Appointment[]
-  prescriptions           Prescription[]
-  medicalReports          MedicalReport[]
-  invoices                Invoice[]
-  visits                  Visit[]
-  medicalHistory          PatientMedicalHistory?
+  @@index([createdAt])
 }
 
 model Visit {
-  id            String   @id @default(uuid())
-  appointmentId String   @unique
-  patientId     String
-  doctorId      String
+  id                  String         @id @default(uuid())
+  appointmentId       String         @unique
+  patientId           String
+  doctorId            String
+  chiefComplaint      String?        @db.Text
+  examination         String?        @db.Text
+  diagnosis           String?        @db.Text
+  diagnosisIcd10      String?        @db.Text
+  treatmentPlan       String?        @db.Text
+  consultationNotes   String?        @db.Text
+  notes               String?        @db.Text
+  status              String         @default("in_progress")
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 
-  chiefComplaint  String?  @db.Text
-  examination     String?  @db.Text
-  diagnosis       String?  @db.Text
-  diagnosisIcd10  String?  @db.Text
-  treatmentPlan   String?  @db.Text
-  medications     Json?
-  labRequests     Json?
-  radiologyRequests Json?
-  vitals          Json?
-  consultationNotes String? @db.Text
-  notes           String?  @db.Text
-  status          String   @default("in_progress") // in_progress | completed
+  appointment         Appointment    @relation(fields: [appointmentId], references: [id])
+  patient             Patient        @relation(fields: [patientId], references: [id])
+  doctor              DoctorProfile  @relation(fields: [doctorId], references: [id])
+  vitalsRecord        Vitals?
+  labRequestRecords   LabRequest[]
+  radiologyRequestRecords RadiologyRequest[]
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  @@index([appointmentId])
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([createdAt])
+}
 
-  appointment   Appointment   @relation(fields: [appointmentId], references: [id])
-  patient       Patient       @relation(fields: [patientId], references: [id])
-  doctor        DoctorProfile @relation(fields: [doctorId], references: [id])
+model Vitals {
+  id              String   @id @default(uuid())
+  visitId         String   @unique
+  temperature     String?
+  pulse           String?
+  spo2            String?
+  bpSystolic      String?
+  bpDiastolic     String?
+  respiratoryRate String?
+  nurseNotes      String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  visit           Visit    @relation(fields: [visitId], references: [id])
+
+  @@index([visitId])
+  @@index([createdAt])
 }
 
 model PatientMedicalHistory {
@@ -189,12 +239,124 @@ model PatientMedicalHistory {
 }
 
 model Medicine {
-  id          String   @id @default(uuid())
+  id           String   @id @default(uuid())
   medicineName String
-  brand       String
+  brand        String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model LabTestCatalog {
+  id          String   @id @default(uuid())
+  testName    String
+  testCode    String   @unique
+  price       Float
+  description String?  @db.Text
+  department  String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  labRequests LabRequest[]
+
+  @@index([createdAt])
+}
+
+model LabRequest {
+  id               String           @id @default(uuid())
+  visitId          String
+  appointmentId    String
+  patientId        String
+  doctorId         String
+  labTestId        String
+  testNameSnapshot String
+  priceSnapshot    Float
+  clinicalNotes    String?          @db.Text
+  status           LabRequestStatus @default(REQUESTED)
+  orderedAt        DateTime         @default(now())
+
+  visit            Visit            @relation(fields: [visitId], references: [id])
+  appointment      Appointment      @relation(fields: [appointmentId], references: [id])
+  patient          Patient          @relation(fields: [patientId], references: [id])
+  doctor           DoctorProfile    @relation(fields: [doctorId], references: [id])
+  labTest          LabTestCatalog   @relation(fields: [labTestId], references: [id])
+  report           LabReport?
+
+  @@index([appointmentId])
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([visitId])
+  @@index([orderedAt])
+}
+
+model LabReport {
+  id           String     @id @default(uuid())
+  labRequestId String     @unique
+  fileUrl      String
+  uploadedBy   String
+  uploadedAt   DateTime   @default(now())
+  reportNotes  String?    @db.Text
+
+  labRequest   LabRequest @relation(fields: [labRequestId], references: [id])
+
+  @@index([uploadedAt])
+}
+
+model RadiologyTestCatalog {
+  id                String   @id @default(uuid())
+  testName          String
+  modality          String
+  price             Float
+  description       String?  @db.Text
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  radiologyRequests RadiologyRequest[]
+
+  @@index([createdAt])
+}
+
+model RadiologyRequest {
+  id                String                 @id @default(uuid())
+  visitId           String
+  appointmentId     String
+  patientId         String
+  doctorId          String
+  radiologyTestId   String
+  testNameSnapshot  String
+  modalitySnapshot  String
+  priceSnapshot     Float
+  clinicalNotes     String?                @db.Text
+  status            RadiologyRequestStatus @default(REQUESTED)
+  orderedAt         DateTime               @default(now())
+
+  visit             Visit                  @relation(fields: [visitId], references: [id])
+  appointment       Appointment            @relation(fields: [appointmentId], references: [id])
+  patient           Patient                @relation(fields: [patientId], references: [id])
+  doctor            DoctorProfile          @relation(fields: [doctorId], references: [id])
+  radiologyTest     RadiologyTestCatalog   @relation(fields: [radiologyTestId], references: [id])
+  report            RadiologyReport?
+
+  @@index([appointmentId])
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([visitId])
+  @@index([orderedAt])
+}
+
+model RadiologyReport {
+  id                 String           @id @default(uuid())
+  radiologyRequestId String           @unique
+  fileUrl            String
+  uploadedBy         String
+  uploadedAt         DateTime         @default(now())
+  reportNotes        String?          @db.Text
+
+  radiologyRequest   RadiologyRequest @relation(fields: [radiologyRequestId], references: [id])
+
+  @@index([uploadedAt])
 }
 
 model Slot {
@@ -205,85 +367,121 @@ model Slot {
   maxCapacity  Int      @default(1)
   bookedCount  Int      @default(0)
   isAvailable  Boolean  @default(true)
-  version      Int      @default(1) // For optimistic locking / race condition prevention
+  version      Int      @default(1)
 
   doctor       DoctorProfile @relation(fields: [doctorId], references: [id])
   appointments Appointment[]
+
+  @@index([doctorId])
+  @@index([startTime])
 }
 
 model Appointment {
-  id              String   @id @default(uuid())
-  token           String   @unique
-  patientId       String
-  doctorId        String
-  slotId          String
-  startTime       DateTime
-  endTime         DateTime
-  status          AppointmentStatus @default(BOOKED)
-  
-  totalAmount     Float
-  paidAmount      Float    @default(0)
-  pendingAmount   Float
-  paymentStatus   PaymentStatus @default(PENDING)
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                String            @id @default(uuid())
+  token             String            @unique
+  patientId         String
+  doctorId          String
+  slotId            String
+  startTime         DateTime
+  endTime           DateTime
+  status            AppointmentStatus @default(BOOKED)
+  totalAmount       Float
+  paidAmount        Float             @default(0)
+  pendingAmount     Float
+  paymentStatus     PaymentStatus     @default(PENDING)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
-  patient         Patient       @relation(fields: [patientId], references: [id])
-  doctor          DoctorProfile @relation(fields: [doctorId], references: [id])
-  slot            Slot          @relation(fields: [slotId], references: [id])
-  payments        Payment[]
-  invoice         Invoice?
-  prescription    Prescription?
-  visit           Visit?
+  patient           Patient           @relation(fields: [patientId], references: [id])
+  doctor            DoctorProfile     @relation(fields: [doctorId], references: [id])
+  slot              Slot              @relation(fields: [slotId], references: [id])
+  payments          Payment[]
+  invoice           Invoice?
+  prescription      Prescription?
+  visit             Visit?
+  billingItems      BillingItem[]
+  labRequests       LabRequest[]
+  radiologyRequests RadiologyRequest[]
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([createdAt])
+}
+
+model BillingItem {
+  id            String          @id @default(uuid())
+  appointmentId String
+  invoiceId     String?
+  category      BillingCategory
+  itemId        String?
+  itemName      String
+  quantity      Int             @default(1)
+  unitPrice     Float
+  totalPrice    Float
+  createdAt     DateTime        @default(now())
+
+  appointment   Appointment     @relation(fields: [appointmentId], references: [id])
+  invoice       Invoice?        @relation(fields: [invoiceId], references: [id])
+
+  @@index([appointmentId])
+  @@index([createdAt])
 }
 
 model Payment {
-  id              String   @id @default(uuid())
+  id              String      @id @default(uuid())
   appointmentId   String
   amount          Float
   paymentMode     PaymentMode
   transactionId   String?
-  status          String   // e.g., SUCCESS, FAILED
-  paymentDate     DateTime @default(now())
+  status          String
+  paymentDate     DateTime    @default(now())
 
   appointment     Appointment @relation(fields: [appointmentId], references: [id])
+
+  @@index([appointmentId])
+  @@index([paymentDate])
 }
 
 model Invoice {
-  id              String   @id @default(uuid())
-  appointmentId   String   @unique
+  id              String        @id @default(uuid())
+  invoiceNumber   String        @unique
+  appointmentId   String        @unique
   patientId       String
   totalAmount     Float
-  taxAmount       Float?
+  taxAmount       Float         @default(0)
   netAmount       Float
-  issuedDate      DateTime @default(now())
+  status          InvoiceStatus @default(DRAFT)
+  issuedDate      DateTime      @default(now())
 
-  appointment     Appointment @relation(fields: [appointmentId], references: [id])
-  patient         Patient     @relation(fields: [patientId], references: [id])
+  appointment     Appointment   @relation(fields: [appointmentId], references: [id])
+  patient         Patient       @relation(fields: [patientId], references: [id])
+  items           BillingItem[]
+
+  @@index([patientId])
+  @@index([issuedDate])
 }
 
 model Prescription {
-  id              String   @id @default(uuid())
-  appointmentId   String   @unique
+  id              String      @id @default(uuid())
+  appointmentId   String      @unique
   patientId       String
-  diagnosisNotes  String   @db.Text
-  medications     Json     // e.g., [{ name, dosage, frequency, days }]
-  issuedDate      DateTime @default(now())
+  diagnosisNotes  String      @db.Text
+  medications     Json
+  issuedDate      DateTime    @default(now())
 
   appointment     Appointment @relation(fields: [appointmentId], references: [id])
   patient         Patient     @relation(fields: [patientId], references: [id])
 }
 
 model MedicalReport {
-  id              String   @id @default(uuid())
+  id              String      @id @default(uuid())
   patientId       String
   reportType      String
-  description     String?  @db.Text
+  description     String?     @db.Text
   fileUrl         String
-  uploadedDate    DateTime @default(now())
+  uploadedDate    DateTime    @default(now())
 
-  patient         Patient  @relation(fields: [patientId], references: [id])
+  patient         Patient     @relation(fields: [patientId], references: [id])
 }
 
 model Department {
@@ -303,6 +501,5 @@ model Organization {
   address          String?  @db.Text
   contactEmail     String?
   contactPhone     String?
-  
   updatedAt        DateTime @updatedAt
 }

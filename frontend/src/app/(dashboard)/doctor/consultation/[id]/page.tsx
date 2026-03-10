@@ -41,8 +41,10 @@ type PrescriptionItem = {
   notes: string;
 };
 
-type LabRequest = { testName: string; clinicalNotes: string; status: string };
-type RadiologyRequest = { modality: "X_RAY" | "MRI" | "CT_SCAN" | "ULTRASOUND"; testName: string; clinicalNotes: string; status: string };
+type LabCatalogItem = { id: string; testName: string; testCode: string };
+type RadiologyCatalogItem = { id: string; testName: string; modality: "X_RAY" | "MRI" | "CT_SCAN" | "ULTRASOUND" };
+type LabRequest = { id?: string; labTestId?: string; testName: string; clinicalNotes: string; status: string };
+type RadiologyRequest = { id?: string; radiologyTestId?: string; modality: "X_RAY" | "MRI" | "CT_SCAN" | "ULTRASOUND"; testName: string; clinicalNotes: string; status: string };
 type Vitals = { temperature: string; pulse: string; spo2: string; bpSystolic: string; bpDiastolic: string; respiratoryRate: string; nurseNotes: string };
 type MedicalHistory = { id?: string; pastMedicalHistory: string; pastSurgicalHistory: string; allergies: string; familyHistory: string; socialHistory: string; medications: string; vaccinationHistory: string };
 type Organization = { organizationName?: string; address?: string; contactPhone?: string; contactEmail?: string };
@@ -116,6 +118,8 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
   const [history, setHistory] = useState<MedicalHistory>(defaultHistory);
   const [pastVisits, setPastVisits] = useState<PastAppointment[]>([]);
   const [medicines, setMedicines] = useState<MedicineMaster[]>([]);
+  const [labCatalog, setLabCatalog] = useState<LabCatalogItem[]>([]);
+  const [radiologyCatalog, setRadiologyCatalog] = useState<RadiologyCatalogItem[]>([]);
   const [organization, setOrganization] = useState<Organization>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -153,15 +157,19 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
 
   const fetchData = async () => {
     try {
-      const [apptRes, visitRes, medsRes, orgRes] = await Promise.all([
+      const [apptRes, visitRes, medsRes, labRes, radiologyRes, orgRes] = await Promise.all([
         api.get(`/bookings/appointments/${unwrappedParams.id}`),
         api.get(`/bookings/appointments/${unwrappedParams.id}/visit`),
         api.get(`/bookings/medicines`),
+        api.get(`/lab/catalog`),
+        api.get(`/radiology/catalog`),
         api.get(`/settings/organization`).catch(() => ({ data: { data: null } })),
       ]);
       const appt = apptRes.data.data;
       setAppointment(appt);
       setMedicines(medsRes.data.data || []);
+      setLabCatalog(labRes.data.data || []);
+      setRadiologyCatalog(radiologyRes.data.data || []);
       setOrganization(orgRes?.data?.data || {});
 
       if (visitRes.data.data) {
@@ -175,8 +183,21 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
           treatmentPlan: current.treatmentPlan || "",
           consultationNotes: current.consultationNotes || current.notes || "",
           medications: normalizeMedications(current.medications || []),
-          labRequests: Array.isArray(current.labRequests) ? current.labRequests : [],
-          radiologyRequests: Array.isArray(current.radiologyRequests) ? current.radiologyRequests : [],
+          labRequests: Array.isArray(current.labRequests) ? current.labRequests.map((request: any) => ({
+            id: request.id,
+            labTestId: request.labTestId,
+            testName: request.testName || "",
+            clinicalNotes: request.clinicalNotes || "",
+            status: request.status || "REQUESTED",
+          })) : [],
+          radiologyRequests: Array.isArray(current.radiologyRequests) ? current.radiologyRequests.map((request: any) => ({
+            id: request.id,
+            radiologyTestId: request.radiologyTestId,
+            modality: request.modality || "X_RAY",
+            testName: request.testName || "",
+            clinicalNotes: request.clinicalNotes || "",
+            status: request.status || "REQUESTED",
+          })) : [],
           vitals: {
             temperature: String(current?.vitals?.temperature || ""),
             pulse: String(current?.vitals?.pulse || ""),
@@ -284,6 +305,29 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
     const next = [...visit.medications];
     next[index] = { ...next[index], [field]: value };
     setVisit({ ...visit, medications: next });
+  };
+
+  const selectLabTest = (index: number, labTestId: string) => {
+    const selected = labCatalog.find((item) => item.id === labTestId);
+    const next = [...visit.labRequests];
+    next[index] = {
+      ...next[index],
+      labTestId,
+      testName: selected?.testName || "",
+    };
+    setVisit({ ...visit, labRequests: next });
+  };
+
+  const selectRadiologyTest = (index: number, radiologyTestId: string) => {
+    const selected = radiologyCatalog.find((item) => item.id === radiologyTestId);
+    const next = [...visit.radiologyRequests];
+    next[index] = {
+      ...next[index],
+      radiologyTestId,
+      testName: selected?.testName || "",
+      modality: selected?.modality || "X_RAY",
+    };
+    setVisit({ ...visit, radiologyRequests: next });
   };
 
   const printPrescription = () => {
@@ -576,7 +620,7 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
             {openPanel.laboratory && (
               <div className="p-4 space-y-3">
                 {!isReadOnly && (
-                  <button onClick={() => setVisit({ ...visit, labRequests: [...visit.labRequests, { testName: "", clinicalNotes: "", status: "REQUESTED" }] })} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm">
+                  <button onClick={() => setVisit({ ...visit, labRequests: [...visit.labRequests, { labTestId: "", testName: "", clinicalNotes: "", status: "REQUESTED" }] })} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm">
                     + Add Request
                   </button>
                 )}
@@ -585,17 +629,19 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
                 ) : (
                   visit.labRequests.map((req, idx) => (
                     <div key={idx} className="p-3 border rounded-xl space-y-2">
-                      <input
-                        value={req.testName}
-                        onChange={(e) => {
-                          const next = [...visit.labRequests];
-                          next[idx] = { ...next[idx], testName: e.target.value };
-                          setVisit({ ...visit, labRequests: next });
-                        }}
-                        placeholder="Test Name"
+                      <select
+                        value={req.labTestId || ""}
+                        onChange={(e) => selectLabTest(idx, e.target.value)}
                         className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
                         disabled={isReadOnly}
-                      />
+                      >
+                        <option value="">Select Lab Test</option>
+                        {labCatalog.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.testName} ({item.testCode})
+                          </option>
+                        ))}
+                      </select>
                       <textarea
                         value={req.clinicalNotes}
                         onChange={(e) => {
@@ -621,7 +667,7 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
             {openPanel.radiology && (
               <div className="p-4 space-y-3">
                 {!isReadOnly && (
-                  <button onClick={() => setVisit({ ...visit, radiologyRequests: [...visit.radiologyRequests, { modality: "X_RAY", testName: "", clinicalNotes: "", status: "REQUESTED" }] })} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm">
+                  <button onClick={() => setVisit({ ...visit, radiologyRequests: [...visit.radiologyRequests, { radiologyTestId: "", modality: "X_RAY", testName: "", clinicalNotes: "", status: "REQUESTED" }] })} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm">
                     + Add Request
                   </button>
                 )}
@@ -631,30 +677,22 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
                   visit.radiologyRequests.map((req, idx) => (
                     <div key={idx} className="p-3 border rounded-xl space-y-2">
                       <select
-                        value={req.modality}
-                        onChange={(e) => {
-                          const next = [...visit.radiologyRequests];
-                          next[idx] = { ...next[idx], modality: e.target.value as RadiologyRequest["modality"] };
-                          setVisit({ ...visit, radiologyRequests: next });
-                        }}
+                        value={req.radiologyTestId || ""}
+                        onChange={(e) => selectRadiologyTest(idx, e.target.value)}
                         className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
                         disabled={isReadOnly}
                       >
-                        <option value="X_RAY">X-Ray</option>
-                        <option value="MRI">MRI</option>
-                        <option value="CT_SCAN">CT Scan</option>
-                        <option value="ULTRASOUND">Ultrasound</option>
+                        <option value="">Select Radiology Test</option>
+                        {radiologyCatalog.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.testName} ({item.modality.replaceAll("_", " ")})
+                          </option>
+                        ))}
                       </select>
                       <input
-                        value={req.testName}
-                        onChange={(e) => {
-                          const next = [...visit.radiologyRequests];
-                          next[idx] = { ...next[idx], testName: e.target.value };
-                          setVisit({ ...visit, radiologyRequests: next });
-                        }}
-                        placeholder="Test Name"
-                        className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-                        disabled={isReadOnly}
+                        value={req.modality.replaceAll("_", " ")}
+                        readOnly
+                        className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
                       />
                       <textarea
                         value={req.clinicalNotes}

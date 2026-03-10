@@ -107,4 +107,15 @@ export class PatientRepository {
       },
     });
   }
+
+  getPatientByUserId(userId: string) {
+    return prisma.patient.findUnique({ where: { userId } });
+  }
+
+  updateRegistrationPaymentStatus(id: string) {
+    return prisma.patient.update({
+      where: { id },
+      data: { registrationPaymentStatus: 'PAID' },
+    });
+  }
 }

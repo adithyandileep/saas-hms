@@ -59,13 +59,13 @@ export default function PatientReports() {
       formDataUpload.append("file", file);
 
       // 1. Upload file
-      const uploadRes = await api.post("/api/upload", formDataUpload, {
+      const uploadRes = await api.post("/upload", formDataUpload, {
         headers: { "Content-Type": "multipart/form-data" }
       });
       const fileUrl = uploadRes.data.url;
 
       // 2. Create DB Record
-      await api.post("/api/medical-reports", {
+      await api.post("/medical-reports", {
         patientId,
         reportType: formData.reportType,
         description: formData.description,

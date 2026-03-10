@@ -152,7 +152,7 @@ export default function ReceptionistDashboard() {
 
       {payingAppt && (
         <PaymentModal 
-          appointment={{ ...payingAppt, totalAmount: payingAppt.totalAmount || 0 } as unknown as Appointment} 
+          appointment={{ ...payingAppt, totalAmount: payingAppt.totalAmount || 0 }} 
           onClose={() => setPayingAppt(null)} 
           onSuccess={() => {
             setPayingAppt(null);

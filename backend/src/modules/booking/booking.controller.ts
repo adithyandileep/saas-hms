@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
+import { PaymentMode } from '@prisma/client';
+import { BookAppointmentDto, CreateBulkSlotsDto, CreateSlotDto, UpdateVisitDto } from './booking.dto';
 import { BookingService } from './booking.service';
-import { CreateSlotDto, BookAppointmentDto, CreateBulkSlotsDto, UpdateVisitDto } from './booking.dto';
-import { prisma } from '../../config/prisma';
-import { PaymentStatus, PaymentMode } from '@prisma/client';
 
 export class BookingController {
   private service = new BookingService();
+
   private isSameDay = (dateA: Date, dateB: Date): boolean =>
     dateA.getFullYear() === dateB.getFullYear()
     && dateA.getMonth() === dateB.getMonth()
@@ -28,12 +28,10 @@ export class BookingController {
   createBulkSlots = async (req: Request, res: Response): Promise<void> => {
     try {
       const data = CreateBulkSlotsDto.parse(req.body);
-
       if (req.user?.role === 'DOCTOR' && req.user.userId !== data.doctorId) {
         res.status(403).json({ message: 'Forbidden: Can only create slots for yourself' });
         return;
       }
-
       const result = await this.service.createBulkSlots(data);
       res.status(201).json(result);
     } catch (error: any) {
@@ -45,12 +43,10 @@ export class BookingController {
     try {
       const doctorId = String(req.params.doctorId || '');
       const date = req.query.date ? String(req.query.date) : '';
-
       if (!doctorId || !date) {
         res.status(400).json({ message: 'Doctor ID and Date are required' });
         return;
       }
-
       const slots = await this.service.getAvailableSlots(doctorId, date);
       res.status(200).json({ data: slots });
     } catch (error: any) {
@@ -70,14 +66,15 @@ export class BookingController {
 
   getAppointments = async (req: Request, res: Response): Promise<void> => {
     try {
-      const userId = req.user?.userId;
-      const role = req.user?.role;
-      const patientId = req.query.patientId ? String(req.query.patientId) : undefined;
-
-      const appointments = await this.service.getAppointmentsForUser(String(userId || ''), String(role || ''), patientId);
+      const appointments = await this.service.getAppointmentsForUser(
+        String(req.user?.userId || ''),
+        String(req.user?.role || ''),
+        req.query.patientId ? String(req.query.patientId) : undefined,
+        req.query.doctorId ? String(req.query.doctorId) : undefined,
+      );
       res.status(200).json({ data: appointments });
     } catch (error: any) {
-      if ((error.message || '').includes('Doctor profile not found')) {
+      if ((error.message || '').includes('profile not found')) {
         res.status(404).json({ message: error.message });
         return;
       }
@@ -93,17 +90,14 @@ export class BookingController {
         res.status(404).json({ message: 'Appointment not found' });
         return;
       }
-
       if (req.user?.role === 'DOCTOR' && !this.isSameDay(new Date(appt.startTime), new Date())) {
         res.status(400).json({ message: 'Doctors can acknowledge only on the appointment day' });
         return;
       }
-
       if (appt.status !== 'BOOKED' && appt.status !== 'CHECKED_IN') {
         res.status(400).json({ message: 'Appointment cannot be acknowledged in current status' });
         return;
       }
-
       const appointment = await this.service.acknowledgeAppointment(id);
       res.status(200).json({ message: 'Appointment acknowledged', data: appointment });
     } catch (error: any) {
@@ -113,8 +107,7 @@ export class BookingController {
 
   getAppointmentById = async (req: Request, res: Response): Promise<void> => {
     try {
-      const id = String(req.params.id);
-      const appt = await this.service.getAppointmentById(id);
+      const appt = await this.service.getAppointmentById(String(req.params.id));
       if (!appt) {
         res.status(404).json({ message: 'Appointment not found' });
         return;
@@ -126,56 +119,25 @@ export class BookingController {
   };
 
   payAppointment = async (req: Request, res: Response): Promise<void> => {
-    const id = String(req.params.id);
-    const { amount, paymentMode } = req.body;
     try {
-      const modeToUse = (paymentMode as PaymentMode) || PaymentMode.CASH;
-
-      const appt = await prisma.appointment.findUnique({ where: { id } });
-      if (!appt) {
-        res.status(404).json({ message: 'Not found' });
-        return;
-      }
-
-      const { PaymentStrategyFactory } = require('../payment/payment.factory');
-      const provider = PaymentStrategyFactory.getProvider(modeToUse);
-
-      const paymentResult = await provider.createPayment(Number(amount), { appointmentId: id });
-
-      if (!paymentResult.success) {
-        res.status(400).json({ message: 'Payment processing failed with provider' });
-        return;
-      }
-
-      const newPaid = appt.paidAmount + Number(amount);
-      const newPending = Math.max(0, appt.totalAmount - newPaid);
-      const newStatus = newPending === 0 ? PaymentStatus.PAID : newPaid > 0 ? PaymentStatus.PARTIAL : PaymentStatus.PENDING;
-
-      await prisma.payment.create({
-        data: {
-          appointmentId: id,
-          amount: Number(amount),
-          paymentMode: modeToUse,
-          status: paymentResult.status,
-          transactionId: paymentResult.transactionId,
-        },
-      });
-
-      const updated = await prisma.appointment.update({
-        where: { id },
-        data: { paidAmount: newPaid, pendingAmount: newPending, paymentStatus: newStatus },
-      });
-
-      res.status(200).json({ data: updated, transactionInfo: paymentResult });
+      const result = await this.service.payAppointment(
+        String(req.params.id),
+        Number(req.body.amount),
+        (req.body.paymentMode as PaymentMode) || PaymentMode.CASH,
+      );
+      res.status(200).json(result);
     } catch (error: any) {
+      if ((error.message || '').includes('Appointment not found')) {
+        res.status(404).json({ message: error.message });
+        return;
+      }
       res.status(400).json({ message: error.message || 'Payment failed' });
     }
   };
 
   getVisit = async (req: Request, res: Response): Promise<void> => {
     try {
-      const appointmentId = String(req.params.id);
-      const visit = await this.service.getVisit(appointmentId);
+      const visit = await this.service.getVisit(String(req.params.id));
       res.status(200).json({ data: visit || null });
     } catch (error: any) {
       res.status(500).json({ message: error.message || 'Failed to fetch visit' });
@@ -191,14 +153,11 @@ export class BookingController {
         res.status(404).json({ message: 'Appointment not found' });
         return;
       }
-
       if (req.user?.role === 'DOCTOR' && !this.isSameDay(new Date(appt.startTime), new Date())) {
         res.status(400).json({ message: 'Doctors can edit consultation only on the appointment day' });
         return;
       }
-
       const visit = await this.service.upsertVisit(appointmentId, data);
-
       res.status(200).json({ message: 'Visit updated', data: visit });
     } catch (error: any) {
       if ((error.message || '').includes('Appointment not found')) {
@@ -211,15 +170,14 @@ export class BookingController {
 
   completeAppointment = async (req: Request, res: Response): Promise<void> => {
     try {
-      const id = String(req.params.id);
-      const appointment = await this.service.completeAppointment(id);
+      const appointment = await this.service.completeAppointment(String(req.params.id));
       res.status(200).json({ message: 'Consultation completed', data: appointment });
     } catch (error: any) {
       res.status(400).json({ message: error.message || 'Failed to complete appointment' });
     }
   };
 
-  getMedicines = async (req: Request, res: Response): Promise<void> => {
+  getMedicines = async (_req: Request, res: Response): Promise<void> => {
     try {
       const data = await this.service.getActiveMedicines();
       res.status(200).json({ data });

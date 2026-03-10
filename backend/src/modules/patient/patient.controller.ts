@@ -1,8 +1,6 @@
 import { Request, Response } from 'express';
 import { PatientService } from './patient.service';
 import { RegisterPatientDto, UpsertPatientMedicalHistoryDto } from './patient.dto';
-import { prisma } from '../../config/prisma';
-import { PaymentStatus, PaymentMode } from '@prisma/client';
 
 export class PatientController {
   private service = new PatientService();
@@ -23,8 +21,7 @@ export class PatientController {
         res.status(403).json({ message: 'Only patients can fetch their profile via /me' });
         return;
       }
-      const { prisma } = require('../../config/prisma');
-      const patient = await prisma.patient.findUnique({ where: { userId: req.user.userId } });
+      const patient = await this.service.getPatientByUserId(req.user.userId);
       if (!patient) {
         res.status(404).json({ message: 'Patient profile not found' });
         return;
@@ -82,32 +79,10 @@ export class PatientController {
   pay = async (req: Request, res: Response): Promise<void> => {
     try {
       const id = req.params.id as string;
-      const { paymentMode } = req.body;
-      const modeToUse = (paymentMode as PaymentMode) || PaymentMode.CASH;
-
-      const patient = await prisma.patient.findUnique({ where: { id } });
-      if (!patient) {
-        res.status(404).json({ message: 'Patient not found' });
-        return;
-      }
-
-      if (patient.registrationPaymentStatus === PaymentStatus.PAID) {
-        res.status(400).json({ message: 'Registration is already paid' });
-        return;
-      }
-
-      const amount = patient.registrationAmount || 0;
-
-      // Registration payment is tracked directly on the Patient model, not the Payment table (which is for appointments)
-
-      const updated = await prisma.patient.update({
-        where: { id },
-        data: { registrationPaymentStatus: PaymentStatus.PAID }
-      });
-
+      const updated = await this.service.payRegistration(id);
       res.status(200).json({ message: 'Registration paid successfully', data: updated });
     } catch (error: any) {
-      res.status(400).json({ message: error.message || 'Payment failed' });
+      res.status(400).json({ message: error.message || 'Registration payment failed' });
     }
   };
 

@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { BookingController } from './booking.controller';
-import { authenticate, requireRoles } from '../../middlewares/auth.middleware';
 import { Role } from '@prisma/client';
+import { authenticate, requireRoles } from '../../middlewares/auth.middleware';
+import { BookingController } from './booking.controller';
 
 const router = Router();
 const controller = new BookingController();
@@ -12,6 +12,7 @@ router.get('/slots/:doctorId', authenticate, controller.getAvailableSlots);
 router.get('/medicines', authenticate, controller.getMedicines);
 router.post('/book', authenticate, requireRoles([Role.RECEPTIONIST, Role.PATIENT, Role.ADMIN, Role.SUPERADMIN]), controller.bookAppointment);
 router.get('/appointments', authenticate, controller.getAppointments);
+router.get('/my-appointments', authenticate, controller.getAppointments);
 router.get('/appointments/:id', authenticate, controller.getAppointmentById);
 router.post('/appointments/:id/pay', authenticate, controller.payAppointment);
 router.patch('/appointments/:id/acknowledge', authenticate, controller.acknowledgeAppointment);

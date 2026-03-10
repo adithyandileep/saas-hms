@@ -1,5 +1,6 @@
 import { PatientRepository } from './patient.repository';
 import { RegisterPatientDto, UpsertPatientMedicalHistoryDto } from './patient.dto';
+import { PaymentStatus } from '@prisma/client';
 import { z } from 'zod';
 
 export class PatientService {
@@ -75,5 +76,18 @@ export class PatientService {
 
   async upsertPatientMedicalHistory(id: string, data: z.infer<typeof UpsertPatientMedicalHistoryDto>) {
     return this.repository.upsertPatientMedicalHistory(id, data);
+  }
+
+  getPatientByUserId(userId: string) {
+    return this.repository.getPatientByUserId(userId);
+  }
+
+  async payRegistration(id: string) {
+    const patient = await this.repository.getPatientById(id);
+    if (!patient) throw new Error('Patient not found');
+    if (patient.registrationPaymentStatus === PaymentStatus.PAID) {
+      throw new Error('Registration is already paid');
+    }
+    return this.repository.updateRegistrationPaymentStatus(id);
   }
 }
