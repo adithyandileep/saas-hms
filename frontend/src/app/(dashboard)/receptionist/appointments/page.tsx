@@ -51,7 +51,6 @@ function ReceptionistAppointmentsContent() {
   const [slotInterval, setSlotInterval] = useState(15);
   const [slotSubmitting, setSlotSubmitting] = useState(false);
   const [bookSubmitting, setBookSubmitting] = useState(false);
-  const [bookPaymentMode, setBookPaymentMode] = useState("CASH");
 
   const [configStartDate, setConfigStartDate] = useState(getLocalDate());
   const [configEndDate, setConfigEndDate] = useState(getLocalDate());
@@ -111,14 +110,13 @@ function ReceptionistAppointmentsContent() {
     if (new Date(slot.endTime) < new Date()) { alert("Cannot book a past slot"); return; }
     setSelectedSlot(slot); setBookingModal(true);
     if (!lockedPatient) { setQuery(""); setSelectedPatient(null); setShowDropdown(false); }
-    setBookPaymentMode("CASH");
   }
 
   async function confirmBooking() {
     if (!selectedSlot || !selectedPatient || !selectedDoctorId) { alert("Select patient and slot"); return; }
     setBookSubmitting(true); setMessage("");
     try {
-      await api.post("/bookings/book", { patientId: selectedPatient.id, doctorId: selectedDoctorId, slotId: selectedSlot.id, paymentMode: bookPaymentMode });
+      await api.post("/bookings/book", { patientId: selectedPatient.id, doctorId: selectedDoctorId, slotId: selectedSlot.id, paymentMode: "CASH" });
       setBookingModal(false); setSelectedSlot(null); setSelectedPatient(null);
       await loadSlots(); // Refresh slots
       router.push(`/receptionist/patients/${selectedPatient.id}`); // Go to receptionist patient detail
@@ -297,20 +295,6 @@ function ReceptionistAppointmentsContent() {
                 ))}
               </div>
             )}
-
-            {/* Payment Mode Selection */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Payment Mode</label>
-              <select
-                value={bookPaymentMode}
-                onChange={(e) => setBookPaymentMode(e.target.value)}
-                className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="CASH">Cash</option>
-                <option value="CREDIT">Card</option>
-                <option value="UPI">UPI</option>
-              </select>
-            </div>
 
             <div className="flex gap-3 justify-end pt-2 border-t border-slate-200 dark:border-slate-800">
               <button onClick={() => { setBookingModal(false); setSelectedSlot(null); setSelectedPatient(null); setQuery(""); }}

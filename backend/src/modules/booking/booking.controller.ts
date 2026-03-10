@@ -24,12 +24,12 @@ export class BookingController {
   createBulkSlots = async (req: Request, res: Response): Promise<void> => {
     try {
       const data = CreateBulkSlotsDto.parse(req.body);
-      
+
       if (req.user?.role === 'DOCTOR' && req.user.userId !== data.doctorId) {
         res.status(403).json({ message: 'Forbidden: Can only create slots for yourself' });
         return;
       }
-      
+
       const result = await this.service.createBulkSlots(data);
       res.status(201).json(result);
     } catch (error: any) {
@@ -70,19 +70,19 @@ export class BookingController {
       const userId = req.user?.userId;
       const role = req.user?.role;
       const patientId = req.query.patientId ? String(req.query.patientId) : undefined;
-      
+
       let appointments;
-      
+
       if (role === 'DOCTOR') {
         // Find doctor profile for this user
         const profile = await prisma.doctorProfile.findFirst({ where: { userId } });
         if (!profile) { res.status(404).json({ message: 'Doctor profile not found' }); return; }
         appointments = await prisma.appointment.findMany({
-          where: { 
+          where: {
             doctorId: profile.id,
             ...(patientId ? { patientId } : {})
           },
-          include: { 
+          include: {
             patient: { select: { name: true, uhid: true } },
             doctor: { select: { name: true, department: true } },
             visit: { select: { id: true, chiefComplaint: true, diagnosis: true, medications: true, notes: true, status: true } }
@@ -93,7 +93,7 @@ export class BookingController {
         // Admin/Receptionist/SuperAdmin: support optional patientId filter
         appointments = await prisma.appointment.findMany({
           where: patientId ? { patientId } : {},
-          include: { 
+          include: {
             patient: { select: { name: true, uhid: true } },
             doctor: { select: { name: true, department: true } },
             visit: { select: { id: true, chiefComplaint: true, diagnosis: true, medications: true, notes: true, status: true } }
@@ -101,7 +101,7 @@ export class BookingController {
           orderBy: { startTime: 'desc' }
         });
       }
-      
+
       res.status(200).json({ data: appointments });
     } catch (error: any) {
       res.status(500).json({ message: 'Failed to fetch appointments' });
@@ -112,6 +112,24 @@ export class BookingController {
   acknowledgeAppointment = async (req: Request, res: Response): Promise<void> => {
     try {
       const id = String(req.params.id);
+
+      const appt = await prisma.appointment.findUnique({ where: { id } });
+      if (!appt) {
+        res.status(404).json({ message: 'Appointment not found' });
+        return;
+      }
+
+      const appointmentDate = new Date(appt.startTime);
+      const today = new Date();
+      if (
+        appointmentDate.getDate() !== today.getDate() ||
+        appointmentDate.getMonth() !== today.getMonth() ||
+        appointmentDate.getFullYear() !== today.getFullYear()
+      ) {
+        res.status(403).json({ message: 'Can only acknowledge appointments for the present day' });
+        return;
+      }
+
       const appointment = await prisma.appointment.update({
         where: { id },
         data: { status: AppointmentStatus.CHECKED_IN }
@@ -146,7 +164,7 @@ export class BookingController {
     const { amount, paymentMode } = req.body;
     try {
       const modeToUse = (paymentMode as PaymentMode) || PaymentMode.CASH;
-      
+
       const appt = await prisma.appointment.findUnique({ where: { id } });
       if (!appt) { res.status(404).json({ message: 'Not found' }); return; }
 
@@ -156,7 +174,7 @@ export class BookingController {
 
       // 2. Perform Payment Creation
       const paymentResult = await provider.createPayment(Number(amount), { appointmentId: id });
-      
+
       if (!paymentResult.success) {
         res.status(400).json({ message: 'Payment processing failed with provider' });
         return;
@@ -169,12 +187,12 @@ export class BookingController {
 
       // 4. Save Payment Record
       await prisma.payment.create({
-        data: { 
-          appointmentId: id, 
-          amount: Number(amount), 
-          paymentMode: modeToUse, 
+        data: {
+          appointmentId: id,
+          amount: Number(amount),
+          paymentMode: modeToUse,
           status: paymentResult.status,
-          transactionId: paymentResult.transactionId 
+          transactionId: paymentResult.transactionId
         },
       });
 
@@ -212,6 +230,17 @@ export class BookingController {
       const appointment = await prisma.appointment.findUnique({ where: { id: appointmentId } });
       if (!appointment) {
         res.status(404).json({ message: 'Appointment not found' });
+        return;
+      }
+
+      const appointmentDate = new Date(appointment.startTime);
+      const today = new Date();
+      if (
+        appointmentDate.getDate() !== today.getDate() ||
+        appointmentDate.getMonth() !== today.getMonth() ||
+        appointmentDate.getFullYear() !== today.getFullYear()
+      ) {
+        res.status(403).json({ message: 'Can only edit notes for the present day' });
         return;
       }
 

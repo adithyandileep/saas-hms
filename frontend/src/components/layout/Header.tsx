@@ -14,35 +14,35 @@ export function Header() {
   const handleLogout = async () => {
     try {
       await api.post(`/auth/logout`);
-    } catch (e) {}
+    } catch (e) { }
     logoutAction();
     router.push("/login");
   };
 
   return (
-    <header className="h-16 flex items-center justify-between px-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm sticky top-0 z-40">
+    <header className="h-16 flex items-center justify-between px-6 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-40">
       <div className="flex items-center space-x-4">
         {/* Mobile menu trigger could go here */}
       </div>
 
       <div className="flex items-center space-x-4">
         <ThemeToggle />
-        
-        <div className="flex items-center space-x-2 border-l border-slate-200 dark:border-slate-700 pl-4">
+
+        <div className="flex items-center space-x-2 border-l border-zinc-200 dark:border-zinc-800 pl-4">
           <div className="flex flex-col text-right">
-            <span className="text-sm font-semibold text-slate-900 dark:text-white leading-tight">
+            <span className="text-sm font-semibold text-zinc-900 dark:text-white leading-tight">
               {user?.username || "Guest"}
             </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400 capitalize">
+            <span className="text-xs text-zinc-500 dark:text-zinc-400 capitalize">
               {user?.role?.toLowerCase() || "Role"}
             </span>
           </div>
-          <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400">
+          <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-900 rounded-full flex items-center justify-center text-zinc-600 dark:text-zinc-400">
             <UserIcon size={20} />
           </div>
-          <button 
+          <button
             onClick={handleLogout}
-            className="p-2 ml-2 text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
+            className="p-2 ml-2 text-zinc-500 hover:text-red-600 hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-lg transition"
           >
             <LogOut size={20} />
           </button>

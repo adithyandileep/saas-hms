@@ -23,7 +23,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [router]);
 
   if (!mounted || !isAuthenticated) {
-     return <div className="min-h-screen bg-slate-50 dark:bg-slate-900" />;
+    return <div className="min-h-screen bg-white dark:bg-zinc-950" />;
   }
 
   // Role-based route guards
@@ -36,11 +36,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (pathname.startsWith("/patient") && user?.role !== "PATIENT") router.push(`/${user?.role.toLowerCase()}`);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 font-sans">
+    <div className="flex h-screen overflow-hidden bg-white dark:bg-zinc-950 font-sans">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50/50 dark:bg-slate-950 relative">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-zinc-50 dark:bg-zinc-950 relative">
           <div className="container mx-auto px-6 py-8">
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               {children}

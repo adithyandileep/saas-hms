@@ -42,17 +42,27 @@ export default function DoctorAppointmentsPage() {
     } finally { setAcknowledging(null); }
   }
 
-  const today = appointments.filter(a => {
+  const todayDateStr = new Date().toDateString();
+
+  const today = appointments.filter(a => new Date(a.startTime).toDateString() === todayDateStr);
+
+  const upcoming = appointments.filter(a => {
     const d = new Date(a.startTime);
-    const n = new Date();
-    return d.toDateString() === n.toDateString();
+    return d > new Date() && d.toDateString() !== todayDateStr;
   });
-  const upcoming = appointments.filter(a => new Date(a.startTime) > new Date() && !today.find(t => t.id === a.id));
+
+  const past = appointments.filter(a => {
+    const d = new Date(a.startTime);
+    return d < new Date() && d.toDateString() !== todayDateStr;
+  });
 
   function AppointmentCard({ a }: { a: Appointment }) {
     const isNew = !a.visit;
     const isInProgress = a.visit && a.visit.status === "in_progress";
     const isCompleted = a.visit && a.visit.status === "completed";
+
+    const d = new Date(a.startTime);
+    const isPast = d < new Date() && d.toDateString() !== new Date().toDateString();
 
     return (
       <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition">
@@ -77,31 +87,42 @@ export default function DoctorAppointmentsPage() {
         </div>
 
         <div className="flex items-center gap-2 ml-4">
-          {isNew && (
-            <button
-              onClick={() => handleAcknowledge(a)}
-              disabled={acknowledging === a.id}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 transition flex items-center gap-2"
-            >
-              {acknowledging === a.id ? <Loader2 className="animate-spin" size={15} /> : null}
-              Acknowledge
-            </button>
-          )}
-          {isInProgress && (
-            <button
-              onClick={() => router.push(`/doctor/consultation/${a.id}`)}
-              className="px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-medium hover:bg-amber-600 transition"
-            >
-              Continue Visit
-            </button>
-          )}
-          {isCompleted && (
+          {isPast ? (
             <button
               onClick={() => router.push(`/doctor/consultation/${a.id}`)}
               className="px-4 py-2 bg-slate-600 text-white rounded-xl text-sm font-medium hover:bg-slate-700 transition"
             >
-              View Notes
+              History
             </button>
+          ) : (
+            <>
+              {isNew && (
+                <button
+                  onClick={() => handleAcknowledge(a)}
+                  disabled={acknowledging === a.id}
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 transition flex items-center gap-2"
+                >
+                  {acknowledging === a.id ? <Loader2 className="animate-spin" size={15} /> : null}
+                  Acknowledge
+                </button>
+              )}
+              {isInProgress && (
+                <button
+                  onClick={() => router.push(`/doctor/consultation/${a.id}`)}
+                  className="px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-medium hover:bg-amber-600 transition"
+                >
+                  Continue Visit
+                </button>
+              )}
+              {isCompleted && (
+                <button
+                  onClick={() => router.push(`/doctor/consultation/${a.id}`)}
+                  className="px-4 py-2 bg-slate-600 text-white rounded-xl text-sm font-medium hover:bg-slate-700 transition"
+                >
+                  View Notes
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -140,6 +161,13 @@ export default function DoctorAppointmentsPage() {
             <div className="space-y-3">
               <h2 className="font-semibold text-slate-700 dark:text-slate-300 text-sm uppercase tracking-wider">Upcoming</h2>
               {upcoming.map(a => <AppointmentCard key={a.id} a={a} />)}
+            </div>
+          )}
+
+          {past.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="font-semibold text-slate-700 dark:text-slate-300 text-sm uppercase tracking-wider">History (Past)</h2>
+              {past.map(a => <AppointmentCard key={a.id} a={a} />)}
             </div>
           )}
 

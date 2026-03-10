@@ -45,7 +45,7 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
 
   useEffect(() => {
     fetchData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unwrappedParams.id]);
 
   const fetchData = async () => {
@@ -239,6 +239,14 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
   if (loading) return <div className="flex justify-center p-20"><Loader2 className="animate-spin text-blue-500" size={40} /></div>;
   if (!appointment) return <div className="text-center p-20 text-slate-500">Appointment not found</div>;
 
+  const isToday = appointment.startTime
+    ? new Date(appointment.startTime).toDateString() === new Date().toDateString()
+    : true;
+  const isPast = appointment.startTime
+    ? new Date(appointment.startTime) < new Date() && !isToday
+    : false;
+  const isReadOnly = isPast || appointment.status === 'COMPLETED';
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div className="flex items-center gap-4">
@@ -248,11 +256,10 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
           Consultation Room
         </h1>
-        <div className={`ml-auto px-4 py-1.5 rounded-full text-sm font-bold ${
-          appointment.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-          : appointment.status === 'CHECKED_IN' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-          : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-        }`}>
+        <div className={`ml-auto px-4 py-1.5 rounded-full text-sm font-bold ${appointment.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+            : appointment.status === 'CHECKED_IN' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+              : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+          }`}>
           {appointment.status}
         </div>
       </div>
@@ -365,9 +372,10 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Chief Complaint (Symptoms)</label>
                 <textarea
                   value={visit.chiefComplaint || ""}
-                  onChange={(e) => setVisit({...visit, chiefComplaint: e.target.value})}
-                  className="w-full border border-slate-300 dark:border-slate-700 bg-transparent rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 min-h-24"
+                  onChange={(e) => setVisit({ ...visit, chiefComplaint: e.target.value })}
+                  className="w-full border border-slate-300 dark:border-slate-700 bg-transparent rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 min-h-24 disabled:opacity-60"
                   placeholder="Patient reports fever, headache..."
+                  disabled={isReadOnly}
                 />
               </div>
 
@@ -375,9 +383,10 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Diagnosis / Impression</label>
                 <textarea
                   value={visit.diagnosis || ""}
-                  onChange={(e) => setVisit({...visit, diagnosis: e.target.value})}
-                  className="w-full border border-slate-300 dark:border-slate-700 bg-transparent rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 min-h-24"
+                  onChange={(e) => setVisit({ ...visit, diagnosis: e.target.value })}
+                  className="w-full border border-slate-300 dark:border-slate-700 bg-transparent rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 min-h-24 disabled:opacity-60"
                   placeholder="Primary diagnosis..."
+                  disabled={isReadOnly}
                 />
               </div>
             </div>
@@ -388,12 +397,14 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
               <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Activity className="text-blue-500" size={20} /> Prescriptions
               </h2>
-              <button
-                onClick={addMedication}
-                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"
-              >
-                + Add Medication
-              </button>
+              {!isReadOnly && (
+                <button
+                  onClick={addMedication}
+                  className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"
+                >
+                  + Add Medication
+                </button>
+              )}
             </div>
 
             <div className="p-6 space-y-4">
@@ -404,23 +415,25 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
                   <div key={idx} className="flex flex-wrap gap-2 items-end bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
                     <div className="flex-1 min-w-[200px]">
                       <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Medicine Name</label>
-                      <input type="text" value={med.name} onChange={e => updateMed(idx, 'name', e.target.value)} className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 text-sm" placeholder="e.g. Paracetamol 500mg" />
+                      <input type="text" value={med.name} onChange={e => updateMed(idx, 'name', e.target.value)} className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 text-sm disabled:opacity-60" placeholder="e.g. Paracetamol 500mg" disabled={isReadOnly} />
                     </div>
                     <div className="w-24">
                       <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Dosage</label>
-                      <input type="text" value={med.dosage} onChange={e => updateMed(idx, 'dosage', e.target.value)} className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 text-sm" placeholder="1 Tab" />
+                      <input type="text" value={med.dosage} onChange={e => updateMed(idx, 'dosage', e.target.value)} className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 text-sm disabled:opacity-60" placeholder="1 Tab" disabled={isReadOnly} />
                     </div>
                     <div className="w-32">
                       <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Frequency</label>
-                      <input type="text" value={med.frequency} onChange={e => updateMed(idx, 'frequency', e.target.value)} className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 text-sm" placeholder="1-0-1 (BID)" />
+                      <input type="text" value={med.frequency} onChange={e => updateMed(idx, 'frequency', e.target.value)} className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 text-sm disabled:opacity-60" placeholder="1-0-1 (BID)" disabled={isReadOnly} />
                     </div>
                     <div className="w-24">
                       <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Duration</label>
-                      <input type="text" value={med.duration} onChange={e => updateMed(idx, 'duration', e.target.value)} className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 text-sm" placeholder="5 Days" />
+                      <input type="text" value={med.duration} onChange={e => updateMed(idx, 'duration', e.target.value)} className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 text-sm disabled:opacity-60" placeholder="5 Days" disabled={isReadOnly} />
                     </div>
-                    <button onClick={() => removeMed(idx)} className="px-3 py-2 bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 rounded-lg text-sm font-bold min-w-10">
-                      &times;
-                    </button>
+                    {!isReadOnly && (
+                      <button onClick={() => removeMed(idx)} className="px-3 py-2 bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 rounded-lg text-sm font-bold min-w-10">
+                        &times;
+                      </button>
+                    )}
                   </div>
                 ))
               )}
@@ -434,16 +447,20 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
                 <Printer size={15} /> Print Prescription
               </button>
               <div className="flex gap-3">
-                <button onClick={handleSaveVisit} disabled={saving} className="px-6 py-2 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center gap-2">
-                  {saving ? <Loader2 className="animate-spin" size={16} /> : null} Save Draft
-                </button>
-                <button
-                  onClick={handleComplete}
-                  className="px-6 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition"
-                  disabled={appointment.status === 'COMPLETED'}
-                >
-                  {appointment.status === 'COMPLETED' ? 'Consultation Finished' : 'Mark as Complete'}
-                </button>
+                {!isReadOnly && (
+                  <>
+                    <button onClick={handleSaveVisit} disabled={saving} className="px-6 py-2 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center gap-2">
+                      {saving ? <Loader2 className="animate-spin" size={16} /> : null} Save Draft
+                    </button>
+                    <button
+                      onClick={handleComplete}
+                      className="px-6 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition"
+                      disabled={appointment.status === 'COMPLETED'}
+                    >
+                      {appointment.status === 'COMPLETED' ? 'Consultation Finished' : 'Mark as Complete'}
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>

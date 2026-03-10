@@ -23,15 +23,15 @@ export function Sidebar() {
 
     // All possible admin links — both management and operational
     const allAdminLinks = [
-      { id: "dashboard",      name: "Dashboard",      href: "/admin",                   icon: Home },
-      { id: "doctors",        name: "Doctors",         href: "/admin/doctors",           icon: Activity },
-      { id: "departments",    name: "Departments",     href: "/admin/departments",       icon: Building2 },
-      { id: "receptionists",  name: "Receptionists",   href: "/admin/receptionists",     icon: Users },
-      { id: "patients",       name: "Patients",        href: "/admin/patients",          icon: Users },
-      { id: "appointments",   name: "Appointments",    href: "/admin/appointments",      icon: Calendar },
-      { id: "billing",        name: "Billing",         href: "/admin/billing",           icon: CreditCard },
-      { id: "prescriptions",  name: "Prescriptions",   href: "/admin/prescriptions",     icon: FileText },
-      { id: "settings",       name: "Settings",        href: "/settings",                icon: Settings },
+      { id: "dashboard", name: "Dashboard", href: "/admin", icon: Home },
+      { id: "doctors", name: "Doctors", href: "/admin/doctors", icon: Activity },
+      { id: "departments", name: "Departments", href: "/admin/departments", icon: Building2 },
+      { id: "receptionists", name: "Receptionists", href: "/admin/receptionists", icon: Users },
+      { id: "patients", name: "Patients", href: "/admin/patients", icon: Users },
+      { id: "appointments", name: "Appointments", href: "/admin/appointments", icon: Calendar },
+      { id: "billing", name: "Billing", href: "/admin/billing", icon: CreditCard },
+      { id: "prescriptions", name: "Prescriptions", href: "/admin/prescriptions", icon: FileText },
+      { id: "settings", name: "Settings", href: "/settings", icon: Settings },
     ];
 
     // Filter based on permissions. SUPERADMIN sees all.
@@ -66,10 +66,10 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-64 bg-slate-900 text-white min-h-screen flex flex-col transition-all duration-300 shadow-2xl z-50">
-      <div className="h-16 flex items-center justify-center border-b border-slate-800 bg-slate-950/50">
-        <h1 className="text-xl font-bold bg-clip-text text-transparent bg-linear-to-r from-blue-400 to-emerald-400 tracking-wide flex items-center gap-2">
-          <Activity size={24} className="text-blue-500" />
+    <aside className="w-64 bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 min-h-screen flex flex-col transition-all duration-300 z-50">
+      <div className="h-16 flex items-center justify-center border-b border-zinc-200 dark:border-zinc-800">
+        <h1 className="text-xl font-bold text-zinc-900 dark:text-white tracking-wide flex items-center gap-2">
+          <Activity size={24} className="text-zinc-900 dark:text-white" />
           Enterprise HMS
         </h1>
       </div>
@@ -81,12 +81,12 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${isActive
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30"
-                  : "text-slate-400 hover:text-white hover:bg-slate-800"
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-medium ${isActive
+                ? "bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-white"
+                : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-900/50"
                 }`}
             >
-              <item.icon size={20} className={isActive ? "text-white" : "text-slate-500"} />
+              <item.icon size={20} className={isActive ? "text-zinc-900 dark:text-white" : "text-zinc-400"} />
               {item.name}
             </Link>
           );

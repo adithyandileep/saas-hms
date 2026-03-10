@@ -68,10 +68,14 @@ export class BookingService {
 
         if (currentSlotEnd <= currentDayEnd) {
           if (currentSlotStart < now) {
-            throw new Error("Selected time is not valid or past.");
+            // Gracefully skip past slots instead of crashing bulk generation
+            currentSlotStart = new Date(currentSlotEnd.getTime() + data.breakDurationMinutes * 60000);
+            continue;
           }
           if (isOverlapping(currentSlotStart, currentSlotEnd)) {
-            throw new Error("One or more generated slots overlap with existing appointments for this doctor.");
+            // Gracefully skip overlaps as well so bulk generation is idempotent
+            currentSlotStart = new Date(currentSlotEnd.getTime() + data.breakDurationMinutes * 60000);
+            continue;
           }
 
           slots.push({

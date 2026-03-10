@@ -38,7 +38,6 @@ function AdminAppointmentsContent() {
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [bookSubmitting, setBookSubmitting] = useState(false);
-  const [bookPaymentMode, setBookPaymentMode] = useState("CASH");
 
   const [query, setQuery] = useState(prefillPatientName);
   const [searchResults, setSearchResults] = useState<Patient[]>([]);
@@ -117,7 +116,7 @@ function AdminAppointmentsContent() {
     if (!selectedSlot || !selectedPatient || !selectedDoctorId) { alert("Select patient and slot"); return; }
     setBookSubmitting(true); setMessage("");
     try {
-      await api.post("/bookings/book", { patientId: selectedPatient.id, doctorId: selectedDoctorId, slotId: selectedSlot.id, paymentMode: bookPaymentMode });
+      await api.post("/bookings/book", { patientId: selectedPatient.id, doctorId: selectedDoctorId, slotId: selectedSlot.id, paymentMode: "CASH" });
       setBookingModal(false); setSelectedSlot(null);
       // Reload slots to reflect updated availability
       await loadSlots();
@@ -294,15 +293,6 @@ function AdminAppointmentsContent() {
                 )}
               </>
             )}
-
-            <div className="mb-4">
-              <label className="block text-xs font-medium text-slate-500 mb-1">Payment Mode</label>
-              <select value={bookPaymentMode} onChange={e => setBookPaymentMode(e.target.value)} className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
-                <option value="CASH">Cash</option>
-                <option value="CREDIT">Card</option>
-                <option value="UPI">UPI</option>
-              </select>
-            </div>
 
             {message && <p className="text-sm text-red-600 dark:text-red-400 mb-3">{message}</p>}
 
