@@ -53,6 +53,9 @@ The backend handles APIs, database interactions, and business logic.
    ```bash
    npx prisma migrate dev
    ```
+   ```bash
+   pnpm db:reset (will reset the entire database)
+   ```
    *(If this is the first run, it will ask for a name for the migration. e.g., "init")*
 
 
