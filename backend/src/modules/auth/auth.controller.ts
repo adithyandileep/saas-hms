@@ -2,6 +2,19 @@ import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto, SetupDto } from './auth.dto';
 
+const isProduction = process.env.NODE_ENV === 'production';
+const cookieSameSite = (process.env.COOKIE_SAME_SITE || (isProduction ? 'none' : 'lax')) as 'strict' | 'lax' | 'none';
+const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
+
+const buildCookieOptions = () => ({
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: cookieSameSite,
+  domain: cookieDomain,
+  path: '/',
+  maxAge: 24 * 60 * 60 * 1000,
+});
+
 export class AuthController {
   private service = new AuthService();
 
@@ -10,12 +23,7 @@ export class AuthController {
       const data = LoginDto.parse(req.body);
       const result = await this.service.login(data);
 
-      res.cookie('token', result.token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 24 * 60 * 60 * 1000 // 1 day
-      });
+      res.cookie('token', result.token, buildCookieOptions());
 
       res.status(200).json({ message: 'Login successful', user: result.user });
     } catch (error: any) {
@@ -24,7 +32,13 @@ export class AuthController {
   };
 
   logout = (req: Request, res: Response): void => {
-    res.clearCookie('token');
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: cookieSameSite,
+      domain: cookieDomain,
+      path: '/',
+    });
     res.status(200).json({ message: 'Logged out successfully' });
   };
 
