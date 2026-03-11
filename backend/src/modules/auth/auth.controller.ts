@@ -2,13 +2,16 @@ import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto, SetupDto } from './auth.dto';
 
-const isProduction = process.env.NODE_ENV === 'production';
-const cookieSameSite = (process.env.COOKIE_SAME_SITE || (isProduction ? 'none' : 'lax')) as 'strict' | 'lax' | 'none';
+// For cross-origin deployments (e.g. Vercel frontend + Railway backend),
+// cookies MUST be sameSite:'none' and secure:true regardless of NODE_ENV.
+// Use env vars to override; defaults are safe for cross-origin HTTPS production.
+const cookieSameSite = (process.env.COOKIE_SAME_SITE || 'none') as 'strict' | 'lax' | 'none';
+const cookieSecure = process.env.COOKIE_SECURE !== 'false'; // default true; set COOKIE_SECURE=false only for local dev
 const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
 
 const buildCookieOptions = () => ({
   httpOnly: true,
-  secure: isProduction,
+  secure: cookieSecure,
   sameSite: cookieSameSite,
   domain: cookieDomain,
   path: '/',
@@ -34,7 +37,7 @@ export class AuthController {
   logout = (req: Request, res: Response): void => {
     res.clearCookie('token', {
       httpOnly: true,
-      secure: isProduction,
+      secure: cookieSecure,
       sameSite: cookieSameSite,
       domain: cookieDomain,
       path: '/',
