@@ -33,6 +33,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
+      version: 1, // bumped from 0 — forces reset for users with old cached state (no token field)
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },
