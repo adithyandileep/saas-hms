@@ -2,22 +2,6 @@ import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto, SetupDto } from './auth.dto';
 
-// For cross-origin deployments (e.g. Vercel frontend + Railway backend),
-// cookies MUST be sameSite:'none' and secure:true regardless of NODE_ENV.
-// Use env vars to override; defaults are safe for cross-origin HTTPS production.
-const cookieSameSite = (process.env.COOKIE_SAME_SITE || 'none') as 'strict' | 'lax' | 'none';
-const cookieSecure = process.env.COOKIE_SECURE !== 'false'; // default true; set COOKIE_SECURE=false only for local dev
-const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
-
-const buildCookieOptions = () => ({
-  httpOnly: true,
-  secure: cookieSecure,
-  sameSite: cookieSameSite,
-  domain: cookieDomain,
-  path: '/',
-  maxAge: 24 * 60 * 60 * 1000,
-});
-
 export class AuthController {
   private service = new AuthService();
 
@@ -25,23 +9,15 @@ export class AuthController {
     try {
       const data = LoginDto.parse(req.body);
       const result = await this.service.login(data);
-
-      res.cookie('token', result.token, buildCookieOptions());
-
-      res.status(200).json({ message: 'Login successful', user: result.user });
+      // Return token in body — frontend stores it in localStorage and sends as Bearer header
+      res.status(200).json({ message: 'Login successful', user: result.user, token: result.token });
     } catch (error: any) {
       res.status(400).json({ message: error.message || 'Login failed' });
     }
   };
 
-  logout = (req: Request, res: Response): void => {
-    res.clearCookie('token', {
-      httpOnly: true,
-      secure: cookieSecure,
-      sameSite: cookieSameSite,
-      domain: cookieDomain,
-      path: '/',
-    });
+  logout = (_req: Request, res: Response): void => {
+    // Token is stored client-side; logout is handled by the frontend clearing it
     res.status(200).json({ message: 'Logged out successfully' });
   };
 

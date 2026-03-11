@@ -49,8 +49,8 @@ export default function LoginPage() {
     try {
       setLoading(true);
       const res = await api.post(`/auth/login`, values);
-      const user = res.data.user;
-      login(user);
+      const { user, token } = res.data;
+      login(user, token);
 
       switch(user.role) {
         case "SUPERADMIN": router.push("/admin"); break;
