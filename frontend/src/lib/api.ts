@@ -8,11 +8,19 @@ const api = axios.create({
   },
 });
 
-// Attach Bearer token from localStorage on every request
+// Read token directly from localStorage — works even before zustand has rehydrated
 api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().token;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem("auth-storage");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const token = parsed?.state?.token;
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+      }
+    } catch (_) {}
   }
   return config;
 });
