@@ -16,16 +16,26 @@ const loginSchema = z.object({
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const login = useAuthStore((state) => state.login);
+  const { login, isAuthenticated, user, hasHydrated } = useAuthStore();
 
   useEffect(() => {
-    // Check if setup is required before showing login
     api.get(`/auth/setup-status`).then((res) => {
       if (res.data.setupRequired) {
         router.push("/install");
       }
     }).catch(() => {});
   }, [router]);
+
+  useEffect(() => {
+    if (!hasHydrated || !isAuthenticated || !user) return;
+
+    if (user.role === "SUPERADMIN" || user.role === "ADMIN") {
+      router.replace("/admin");
+      return;
+    }
+
+    router.replace(`/${user.role.toLowerCase()}`);
+  }, [hasHydrated, isAuthenticated, router, user]);
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -42,7 +52,6 @@ export default function LoginPage() {
       const user = res.data.user;
       login(user);
 
-      // Auto-detect role and loads respective dashboard
       switch(user.role) {
         case "SUPERADMIN": router.push("/admin"); break;
         case "ADMIN": router.push("/admin"); break;
@@ -96,7 +105,7 @@ export default function LoginPage() {
               autoComplete="current-password"
               {...form.register("password")} 
               className="w-full rounded-lg bg-slate-900/50 border-slate-600 text-white placeholder-slate-500 focus:border-blue-500 focus:ring-blue-500 p-3 border transition-colors" 
-              placeholder="••••••••"
+              placeholder="********"
             />
             {form.formState.errors.password && <p className="text-red-400 text-xs mt-1">{form.formState.errors.password.message}</p>}
           </div>

@@ -4,36 +4,43 @@ import { useAuthStore } from "@/store/authStore";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, hasHydrated } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      setMounted(true);
-      if (!useAuthStore.getState().isAuthenticated) {
-        router.push("/login");
-      }
-    }, 50);
-    return () => clearTimeout(timeout);
-  }, [router]);
+    if (!hasHydrated) return;
+    if (!isAuthenticated) {
+      router.replace("/login");
+    }
+  }, [hasHydrated, isAuthenticated, router]);
 
-  if (!mounted || !isAuthenticated) {
+  useEffect(() => {
+    if (!hasHydrated || !isAuthenticated || !user) return;
+
+    const isAdminRole = user.role === "SUPERADMIN" || user.role === "ADMIN";
+    const targetRoute = isAdminRole ? "/admin" : `/${user.role.toLowerCase()}`;
+
+    if (pathname.startsWith("/admin") && !isAdminRole) {
+      router.replace(targetRoute);
+    }
+    if (pathname.startsWith("/doctor") && user.role !== "DOCTOR") {
+      router.replace(targetRoute);
+    }
+    if (pathname.startsWith("/receptionist") && user.role !== "RECEPTIONIST" && !isAdminRole) {
+      router.replace(targetRoute);
+    }
+    if (pathname.startsWith("/patient") && user.role !== "PATIENT") {
+      router.replace(targetRoute);
+    }
+  }, [hasHydrated, isAuthenticated, pathname, router, user]);
+
+  if (!hasHydrated || !isAuthenticated) {
     return <div className="min-h-screen bg-white dark:bg-zinc-950" />;
   }
-
-  // Role-based route guards
-  const isAdminRole = user?.role === "SUPERADMIN" || user?.role === "ADMIN";
-
-  if (pathname.startsWith("/admin") && !isAdminRole) router.push(`/${user?.role.toLowerCase()}`);
-  if (pathname.startsWith("/doctor") && user?.role !== "DOCTOR") router.push(`/${user?.role.toLowerCase()}`);
-  // Allow admins/superadmins to access receptionist billing detail pages (admin billing links to them)
-  if (pathname.startsWith("/receptionist") && user?.role !== "RECEPTIONIST" && !isAdminRole) router.push(`/${user?.role.toLowerCase()}`);
-  if (pathname.startsWith("/patient") && user?.role !== "PATIENT") router.push(`/${user?.role.toLowerCase()}`);
 
   return (
     <div className="flex h-screen overflow-hidden bg-white dark:bg-zinc-950 font-sans">
